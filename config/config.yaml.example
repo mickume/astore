@@ -1,0 +1,73 @@
+# Zot Artifact Store Configuration Example
+# For container deployment
+
+# HTTP Server Configuration
+http:
+  address: 0.0.0.0
+  port: "8080"
+
+  # TLS Configuration (optional, recommended for production)
+  # tls:
+  #   cert: /zot/config/server.crt
+  #   key: /zot/config/server.key
+
+  # Authentication (configure for production)
+  # auth:
+  #   htpasswd:
+  #     path: /zot/config/htpasswd
+  #   bearer:
+  #     realm: "Zot Artifact Store"
+  #     service: "zot"
+
+  # CORS Configuration
+  allowOrigin: "*"
+
+# Storage Configuration
+storage:
+  # Root directory for artifact storage
+  rootDirectory: /zot/data
+
+  # Enable deduplication
+  dedupe: true
+
+  # Garbage collection settings
+  gc: true
+  gcDelay: 1h
+
+  # Storage driver configuration
+  # storageDriver:
+  #   name: s3
+  #   region: us-east-1
+  #   bucket: zot-artifacts
+  #   secure: true
+
+# Logging Configuration
+log:
+  level: info
+  output: /zot/logs/zot-artifact-store.log
+  audit: /zot/logs/audit.log
+
+# Extensions Configuration (to be implemented)
+# extensions:
+#   s3api:
+#     enabled: true
+#   rbac:
+#     enabled: true
+#     keycloak:
+#       url: https://keycloak.example.com
+#       realm: zot
+#       clientId: zot-artifact-store
+#   supplychain:
+#     enabled: true
+#     signing:
+#       providers:
+#         - cosign
+#         - notary
+#     sbom:
+#       formats:
+#         - spdx
+#         - cyclonedx
+#   metrics:
+#     enabled: true
+#     prometheus:
+#       enabled: true

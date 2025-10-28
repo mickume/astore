@@ -1,0 +1,78 @@
+# Multi-stage build for Zot Artifact Store
+# Stage 1: Build the application
+FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY cmd/ cmd/
+COPY pkg/ pkg/
+COPY internal/ internal/
+COPY api/ api/
+
+# Build the application
+# Use CGO_ENABLED=0 for static binary and add build tags for container compatibility
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -tags containers_image_openpgp \
+    -ldflags="-w -s -X main.version=${VERSION:-dev}" \
+    -o /workspace/bin/zot-artifact-store \
+    ./cmd/zot-artifact-store
+
+# Stage 2: Create minimal runtime image
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+# Add labels for OpenShift and container metadata
+LABEL name="zot-artifact-store" \
+      vendor="Zot Artifact Store Project" \
+      version="0.1.0-dev" \
+      release="1" \
+      summary="S3-compatible artifact storage with supply chain security" \
+      description="Zot Artifact Store extends the Zot OCI registry to provide S3-compatible \
+      binary artifact storage with enterprise RBAC, signing, SBOMs, and attestations."
+
+# Install minimal required packages
+RUN microdnf update -y && \
+    microdnf install -y ca-certificates && \
+    microdnf clean all && \
+    rm -rf /var/cache/yum
+
+# Create non-root user for running the application
+# OpenShift uses arbitrary UIDs, so we set permissions accordingly
+RUN mkdir -p /zot/data /zot/config /zot/logs && \
+    chmod -R g+rwX /zot && \
+    chgrp -R 0 /zot
+
+# Copy binary from builder
+COPY --from=builder /workspace/bin/zot-artifact-store /usr/local/bin/zot-artifact-store
+
+# Copy license file (create placeholder for now)
+RUN echo "License information to be added" > /licenses/LICENSE
+
+# Set working directory
+WORKDIR /zot
+
+# Expose port
+EXPOSE 8080
+
+# Use non-root user (OpenShift will override with arbitrary UID)
+USER 1001
+
+# Set environment variables
+ENV ZOT_DATA_DIR=/zot/data \
+    ZOT_CONFIG_FILE=/zot/config/config.yaml \
+    ZOT_LOG_DIR=/zot/logs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/usr/local/bin/zot-artifact-store", "status"] || exit 1
+
+# Run the application
+ENTRYPOINT ["/usr/local/bin/zot-artifact-store"]
+CMD ["--config", "/zot/config/config.yaml"]

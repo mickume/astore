@@ -1,0 +1,41 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Build artifacts
+bin/
+dist/
+build/
+*.tar.gz
+*.tar
+
+# Test files
+test/
+*_test.go
+coverage.txt
+coverage.html
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+.local/
+
+# Deployment files (not needed in container)
+deployments/operator/
+deployments/container/*.yaml

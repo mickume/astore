@@ -1,0 +1,22 @@
+apiVersion: artifacts.zot.io/v1alpha1
+kind: ZotArtifactStore
+metadata:
+  name: zot-minimal
+  namespace: default
+spec:
+  # Minimal configuration with defaults
+  replicas: 1
+
+  storage:
+    type: filesystem
+    size: 20Gi
+
+  extensions:
+    s3api:
+      enabled: true
+    rbac:
+      enabled: false
+    supplychain:
+      enabled: false
+    metrics:
+      enabled: true

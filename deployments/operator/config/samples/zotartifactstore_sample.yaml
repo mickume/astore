@@ -1,0 +1,87 @@
+apiVersion: artifacts.zot.io/v1alpha1
+kind: ZotArtifactStore
+metadata:
+  name: zot-artifact-store-sample
+  namespace: zot-system
+spec:
+  # Image configuration
+  image:
+    repository: quay.io/zot-artifact-store
+    tag: "0.1.0-dev"
+    pullPolicy: IfNotPresent
+
+  # Number of replicas
+  replicas: 2
+
+  # HTTP configuration
+  http:
+    port: 8080
+    tls:
+      enabled: false
+      # Uncomment for TLS
+      # certSecretName: zot-tls-cert
+      # keySecretName: zot-tls-key
+
+  # Storage configuration
+  storage:
+    type: filesystem
+    size: 100Gi
+    storageClassName: standard
+
+    # S3 storage example (uncomment to use)
+    # type: s3
+    # s3:
+    #   endpoint: s3.amazonaws.com
+    #   region: us-east-1
+    #   bucket: zot-artifacts
+    #   accessKeySecret: aws-access-key
+    #   secretKeySecret: aws-secret-key
+
+  # Extension configuration
+  extensions:
+    # S3-compatible API
+    s3api:
+      enabled: true
+      maxUploadSize: 5Gi
+
+    # RBAC with Keycloak
+    rbac:
+      enabled: true
+      keycloak:
+        url: https://keycloak.example.com
+        realm: zot
+        clientId: zot-artifact-store
+        clientSecretName: keycloak-client-secret
+
+    # Supply chain security
+    supplychain:
+      enabled: true
+      signing:
+        providers:
+          - cosign
+          - notary
+      sbom:
+        formats:
+          - spdx
+          - cyclonedx
+
+    # Enhanced metrics
+    metrics:
+      enabled: true
+      prometheus:
+        enabled: true
+        path: /metrics
+
+  # Resource limits
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+
+  # Logging
+  log:
+    level: info
+    format: json

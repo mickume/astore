@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  zot-artifact-store:
+    container_name: zot-artifact-store
+    image: zot-artifact-store:latest
+    build:
+      context: ../..
+      dockerfile: deployments/container/Containerfile
+      args:
+        VERSION: 0.1.0-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/zot/config:Z
+      - ./data:/zot/data:Z
+      - ./logs:/zot/logs:Z
+    environment:
+      - ZOT_LOG_LEVEL=info
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v2/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Keycloak for RBAC (to be configured)
+  # keycloak:
+  #   image: quay.io/keycloak/keycloak:latest
+  #   container_name: zot-keycloak
+  #   environment:
+  #     - KEYCLOAK_ADMIN=admin
+  #     - KEYCLOAK_ADMIN_PASSWORD=admin
+  #   ports:
+  #     - "8081:8080"
+  #   command:
+  #     - start-dev
+
+  # Optional: Prometheus for metrics
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: zot-prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml:Z
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+
+volumes:
+  zot-data:
+  zot-config:
+  zot-logs:
+
+networks:
+  default:
+    name: zot-network

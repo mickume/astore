@@ -1,0 +1,299 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: zotartifactstores.artifacts.zot.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+spec:
+  group: artifacts.zot.io
+  names:
+    kind: ZotArtifactStore
+    listKind: ZotArtifactStoreList
+    plural: zotartifactstores
+    singular: zotartifactstore
+    shortNames:
+      - zas
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: ZotArtifactStore is the Schema for the zotartifactstores API
+          type: object
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ZotArtifactStoreSpec defines the desired state of ZotArtifactStore
+              type: object
+              properties:
+                # Image configuration
+                image:
+                  description: Container image configuration
+                  type: object
+                  properties:
+                    repository:
+                      type: string
+                      default: "quay.io/zot-artifact-store"
+                    tag:
+                      type: string
+                      default: "latest"
+                    pullPolicy:
+                      type: string
+                      enum: ["Always", "IfNotPresent", "Never"]
+                      default: "IfNotPresent"
+                    pullSecrets:
+                      type: array
+                      items:
+                        type: string
+
+                # Replica configuration
+                replicas:
+                  description: Number of replicas
+                  type: integer
+                  minimum: 1
+                  default: 1
+
+                # HTTP server configuration
+                http:
+                  description: HTTP server configuration
+                  type: object
+                  properties:
+                    port:
+                      type: integer
+                      default: 8080
+                    tls:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                        certSecretName:
+                          type: string
+                        keySecretName:
+                          type: string
+
+                # Storage configuration
+                storage:
+                  description: Storage configuration
+                  type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      enum: ["filesystem", "s3", "azure", "gcp"]
+                      default: "filesystem"
+                    size:
+                      type: string
+                      default: "50Gi"
+                    storageClassName:
+                      type: string
+                    s3:
+                      type: object
+                      properties:
+                        endpoint:
+                          type: string
+                        region:
+                          type: string
+                        bucket:
+                          type: string
+                        accessKeySecret:
+                          type: string
+                        secretKeySecret:
+                          type: string
+                    azure:
+                      type: object
+                      properties:
+                        accountName:
+                          type: string
+                        container:
+                          type: string
+                        credentialsSecret:
+                          type: string
+                    gcp:
+                      type: object
+                      properties:
+                        bucket:
+                          type: string
+                        credentialsSecret:
+                          type: string
+
+                # Extensions configuration
+                extensions:
+                  description: Extension configuration
+                  type: object
+                  properties:
+                    s3api:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        maxUploadSize:
+                          type: string
+                          default: "5Gi"
+
+                    rbac:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        keycloak:
+                          type: object
+                          properties:
+                            url:
+                              type: string
+                            realm:
+                              type: string
+                            clientId:
+                              type: string
+                            clientSecretName:
+                              type: string
+
+                    supplychain:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        signing:
+                          type: object
+                          properties:
+                            providers:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["cosign", "notary", "gpg"]
+                              default: ["cosign"]
+                        sbom:
+                          type: object
+                          properties:
+                            formats:
+                              type: array
+                              items:
+                                type: string
+                                enum: ["spdx", "cyclonedx"]
+                              default: ["spdx", "cyclonedx"]
+
+                    metrics:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        prometheus:
+                          type: object
+                          properties:
+                            enabled:
+                              type: boolean
+                              default: true
+                            path:
+                              type: string
+                              default: "/metrics"
+
+                # Resource limits
+                resources:
+                  description: Resource requirements
+                  type: object
+                  properties:
+                    limits:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                          default: "1000m"
+                        memory:
+                          type: string
+                          default: "2Gi"
+                    requests:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                          default: "500m"
+                        memory:
+                          type: string
+                          default: "1Gi"
+
+                # Logging configuration
+                log:
+                  description: Logging configuration
+                  type: object
+                  properties:
+                    level:
+                      type: string
+                      enum: ["debug", "info", "warn", "error"]
+                      default: "info"
+                    format:
+                      type: string
+                      enum: ["json", "text"]
+                      default: "json"
+
+            status:
+              description: ZotArtifactStoreStatus defines the observed state
+              type: object
+              properties:
+                phase:
+                  description: Current phase of the deployment
+                  type: string
+                  enum: ["Pending", "Creating", "Running", "Failed"]
+                conditions:
+                  description: Current conditions
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                replicas:
+                  description: Current number of replicas
+                  type: integer
+                readyReplicas:
+                  description: Number of ready replicas
+                  type: integer
+                serviceEndpoint:
+                  description: Service endpoint URL
+                  type: string
+
+      additionalPrinterColumns:
+        - name: Status
+          type: string
+          description: Current status of the ZotArtifactStore
+          jsonPath: .status.phase
+        - name: Replicas
+          type: integer
+          description: Number of replicas
+          jsonPath: .status.replicas
+        - name: Ready
+          type: integer
+          description: Number of ready replicas
+          jsonPath: .status.readyReplicas
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas
+          labelSelectorPath: .status.selector
