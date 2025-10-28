@@ -15,9 +15,12 @@ Zot Artifact Store extends the Zot OCI registry to provide:
 
 ## Project Status
 
-✅ **Phase 1 Complete: Foundation** - Extension framework, testing infrastructure, and deployment setup ready
+✅ **Phase 1 Complete: Foundation** - Extension framework, testing infrastructure, and deployment setup
 ✅ **Phase 2 Complete: Core S3 API** - Full S3-compatible API with multipart uploads and resumable downloads
-🚧 **Phase 3 Next: RBAC** - Keycloak integration and enterprise authentication
+✅ **Phase 3 Complete: RBAC** - Keycloak integration, policy engine, and comprehensive audit logging
+🚧 **Phase 4 In Progress: Supply Chain Security** - Artifact signing and verification, SBOM management
+
+**Overall Progress:** 56% complete (32/57 foundation tasks) | [View Detailed Status](docs/IMPLEMENTATION_STATUS.md)
 
 ### Completed Features
 
@@ -43,6 +46,27 @@ Zot Artifact Store extends the Zot OCI registry to provide:
 - ✅ Filesystem-based storage with atomic operations
 - ✅ Comprehensive test coverage (17/17 tests passing)
 - ✅ S3 API documentation with client examples
+
+#### Phase 3: RBAC with Keycloak Integration
+- ✅ JWT token validation with Keycloak OIDC/OAuth2
+- ✅ Policy-based authorization engine (resource + action based)
+- ✅ Authentication and authorization HTTP middleware
+- ✅ Comprehensive audit logging system
+- ✅ Policy management API (create, read, update, delete policies)
+- ✅ Audit log query API with filtering
+- ✅ Admin role with full access
+- ✅ Deny > Allow precedence for policies
+- ✅ Wildcard and pattern matching for resources
+- ✅ Anonymous access support (configurable for GET operations)
+- ✅ Extended BoltDB with policies and audit logs
+- ✅ Test coverage (7/7 policy tests passing)
+
+#### Phase 4: Supply Chain Security (Partial)
+- ✅ Supply chain models (Signature, SBOM, Attestation)
+- ✅ Cryptographic signing and verification (RSA-SHA256)
+- 🚧 SBOM storage and retrieval (pending)
+- 🚧 Attestation management (pending)
+- 🚧 Integration with S3 API workflow (pending)
 
 ## Architecture
 

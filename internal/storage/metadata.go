@@ -11,10 +11,12 @@ import (
 
 var (
 	// Bucket names for BoltDB
-	bucketsBucket       = []byte("buckets")
-	artifactsBucket     = []byte("artifacts")
-	multipartBucket     = []byte("multipart_uploads")
+	bucketsBucket        = []byte("buckets")
+	artifactsBucket      = []byte("artifacts")
+	multipartBucket      = []byte("multipart_uploads")
 	uploadProgressBucket = []byte("upload_progress")
+	policiesBucket       = []byte("policies")
+	auditLogsBucket      = []byte("audit_logs")
 )
 
 // MetadataStore manages artifact and bucket metadata using BoltDB
@@ -31,7 +33,7 @@ func NewMetadataStore(dbPath string) (*MetadataStore, error) {
 
 	// Create buckets if they don't exist
 	err = db.Update(func(tx *bolt.Tx) error {
-		for _, bucket := range [][]byte{bucketsBucket, artifactsBucket, multipartBucket, uploadProgressBucket} {
+		for _, bucket := range [][]byte{bucketsBucket, artifactsBucket, multipartBucket, uploadProgressBucket, policiesBucket, auditLogsBucket} {
 			if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
 				return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
 			}
@@ -263,6 +265,131 @@ func (s *MetadataStore) DeleteMultipartUpload(uploadID string) error {
 		b := tx.Bucket(multipartBucket)
 		return b.Delete([]byte(uploadID))
 	})
+}
+
+// === Policy Operations ===
+
+// StorePolicy stores a policy
+func (s *MetadataStore) StorePolicy(policy *models.Policy) error {
+	policy.UpdatedAt = time.Now()
+	if policy.CreatedAt.IsZero() {
+		policy.CreatedAt = policy.UpdatedAt
+	}
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(policiesBucket)
+		data, err := json.Marshal(policy)
+		if err != nil {
+			return fmt.Errorf("failed to marshal policy: %w", err)
+		}
+		return b.Put([]byte(policy.ID), data)
+	})
+}
+
+// GetPolicy retrieves a policy by ID
+func (s *MetadataStore) GetPolicy(id string) (*models.Policy, error) {
+	var policy models.Policy
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(policiesBucket)
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("policy %s not found", id)
+		}
+		return json.Unmarshal(data, &policy)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &policy, nil
+}
+
+// ListPolicies lists all policies
+func (s *MetadataStore) ListPolicies() ([]*models.Policy, error) {
+	var policies []*models.Policy
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(policiesBucket)
+		return b.ForEach(func(k, v []byte) error {
+			var policy models.Policy
+			if err := json.Unmarshal(v, &policy); err != nil {
+				return err
+			}
+			policies = append(policies, &policy)
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return policies, nil
+}
+
+// DeletePolicy deletes a policy
+func (s *MetadataStore) DeletePolicy(id string) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(policiesBucket)
+		return b.Delete([]byte(id))
+	})
+}
+
+// === Audit Log Operations ===
+
+// StoreAuditLog stores an audit log entry
+func (s *MetadataStore) StoreAuditLog(log *models.AuditLog) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(auditLogsBucket)
+		data, err := json.Marshal(log)
+		if err != nil {
+			return fmt.Errorf("failed to marshal audit log: %w", err)
+		}
+		// Use timestamp + ID as key for chronological ordering
+		key := []byte(fmt.Sprintf("%d_%s", log.Timestamp.Unix(), log.ID))
+		return b.Put(key, data)
+	})
+}
+
+// ListAuditLogs retrieves audit logs with optional filtering
+func (s *MetadataStore) ListAuditLogs(userID string, resource string, startTime, endTime time.Time, limit int) ([]*models.AuditLog, error) {
+	var logs []*models.AuditLog
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(auditLogsBucket)
+		c := b.Cursor()
+
+		// Iterate in reverse chronological order
+		count := 0
+		for k, v := c.Last(); k != nil && (limit == 0 || count < limit); k, v = c.Prev() {
+			var log models.AuditLog
+			if err := json.Unmarshal(v, &log); err != nil {
+				continue
+			}
+
+			// Apply filters
+			if userID != "" && log.UserID != userID {
+				continue
+			}
+			if resource != "" && log.Resource != resource {
+				continue
+			}
+			if !startTime.IsZero() && log.Timestamp.Before(startTime) {
+				continue
+			}
+			if !endTime.IsZero() && log.Timestamp.After(endTime) {
+				continue
+			}
+
+			logs = append(logs, &log)
+			count++
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return logs, nil
 }
 
 // === Helper Functions ===
