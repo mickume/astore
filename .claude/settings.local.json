@@ -10,7 +10,8 @@
       "Bash(chmod:*)",
       "Bash(CGO_ENABLED=0 go test:*)",
       "Bash(make test:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(go build:*)"
     ],
     "deny": [],
     "ask": []
