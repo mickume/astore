@@ -1,0 +1,140 @@
+apiVersion: artifact.zotregistry.io/v1alpha1
+kind: ZotArtifactStore
+metadata:
+  name: production-artifact-store
+  namespace: artifact-store
+  labels:
+    app: zot-artifact-store
+    environment: production
+spec:
+  replicas: 3
+
+  image:
+    repository: ghcr.io/candlekeep/zot-artifact-store
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+    pullSecrets:
+      - ghcr-credentials
+
+  storage:
+    type: s3
+    s3:
+      endpoint: https://s3.amazonaws.com
+      bucket: production-artifacts
+      region: us-east-1
+      accessKeySecret:
+        name: s3-credentials
+        accessKeyField: access-key
+        secretKeyField: secret-key
+
+  database:
+    type: postgres
+    postgres:
+      host: postgres.database.svc.cluster.local
+      port: 5432
+      database: artifactstore
+      credentialsSecret: postgres-credentials
+
+  rbac:
+    enabled: true
+    keycloak:
+      url: https://keycloak.example.com
+      realm: artifacts
+      clientId: zot-artifact-store
+      clientSecretRef:
+        name: keycloak-credentials
+        key: client-secret
+
+  supplyChain:
+    enabled: true
+    signing:
+      enabled: true
+      keySize: 4096
+      keySecretRef:
+        name: signing-keys
+        privateKeyField: private-key
+        publicKeyField: public-key
+    sbom:
+      enabled: true
+      defaultFormat: spdx
+
+  metrics:
+    enabled: true
+    prometheus:
+      enabled: true
+      port: 8081
+      path: /metrics
+      serviceMonitor: true
+    tracing:
+      enabled: true
+      jaeger:
+        endpoint: http://jaeger-collector.observability.svc.cluster.local:14268/api/traces
+        samplingRate: 0.1
+
+  networking:
+    service:
+      type: LoadBalancer
+      port: 443
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    ingress:
+      enabled: true
+      className: nginx
+      host: artifacts.example.com
+      tls:
+        enabled: true
+        secretName: tls-certificate
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - zot-artifact-store
+            topologyKey: kubernetes.io/hostname
+
+  tolerations:
+    - key: "workload"
+      operator: "Equal"
+      value: "artifact-store"
+      effect: "NoSchedule"
+
+  nodeSelector:
+    workload: artifact-store

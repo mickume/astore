@@ -1,0 +1,245 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zot-artifact-store-operator
+  namespace: zot-operator-system
+  labels:
+    app: zot-artifact-store-operator
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: zot-artifact-store-operator
+  labels:
+    app: zot-artifact-store-operator
+rules:
+  # ZotArtifactStore CRD permissions
+  - apiGroups:
+      - artifact.zotregistry.io
+    resources:
+      - zotartifactstores
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  - apiGroups:
+      - artifact.zotregistry.io
+    resources:
+      - zotartifactstores/status
+    verbs:
+      - get
+      - patch
+      - update
+
+  - apiGroups:
+      - artifact.zotregistry.io
+    resources:
+      - zotartifactstores/finalizers
+    verbs:
+      - update
+
+  # Core resources
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - services/finalizers
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+      - serviceaccounts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # Apps resources
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # Networking resources
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # Autoscaling resources
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # Policy resources
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # Monitoring resources (Prometheus Operator)
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - servicemonitors
+      - prometheusrules
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # RBAC resources
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+      - rolebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+  # OpenShift routes (optional)
+  - apiGroups:
+      - route.openshift.io
+    resources:
+      - routes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: zot-artifact-store-operator
+  labels:
+    app: zot-artifact-store-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: zot-artifact-store-operator
+subjects:
+  - kind: ServiceAccount
+    name: zot-artifact-store-operator
+    namespace: zot-operator-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zot-artifact-store-operator-leader-election
+  namespace: zot-operator-system
+  labels:
+    app: zot-artifact-store-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zot-artifact-store-operator-leader-election
+  namespace: zot-operator-system
+  labels:
+    app: zot-artifact-store-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zot-artifact-store-operator-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: zot-artifact-store-operator
+    namespace: zot-operator-system

@@ -1,0 +1,512 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: zotartifactstores.artifact.zotregistry.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.0
+spec:
+  group: artifact.zotregistry.io
+  names:
+    kind: ZotArtifactStore
+    listKind: ZotArtifactStoreList
+    plural: zotartifactstores
+    singular: zotartifactstore
+    shortNames:
+      - zas
+      - artifactstore
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: ZotArtifactStore is the Schema for the zotartifactstores API
+          type: object
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object.'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents.'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ZotArtifactStoreSpec defines the desired state of ZotArtifactStore
+              type: object
+              properties:
+                replicas:
+                  description: Number of replicas for high availability
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 10
+                  default: 1
+
+                image:
+                  description: Container image for the artifact store
+                  type: object
+                  properties:
+                    repository:
+                      type: string
+                      default: ghcr.io/candlekeep/zot-artifact-store
+                    tag:
+                      type: string
+                      default: latest
+                    pullPolicy:
+                      type: string
+                      enum: [Always, IfNotPresent, Never]
+                      default: IfNotPresent
+                    pullSecrets:
+                      type: array
+                      items:
+                        type: string
+
+                storage:
+                  description: Storage configuration
+                  type: object
+                  properties:
+                    type:
+                      description: Storage backend type
+                      type: string
+                      enum: [filesystem, s3, gcs, azure]
+                      default: filesystem
+
+                    size:
+                      description: Storage size for PVC
+                      type: string
+                      default: 10Gi
+                      pattern: '^[0-9]+[KMGT]i?$'
+
+                    storageClass:
+                      description: StorageClass for PVC
+                      type: string
+
+                    s3:
+                      description: S3-compatible storage configuration
+                      type: object
+                      properties:
+                        endpoint:
+                          type: string
+                        bucket:
+                          type: string
+                        region:
+                          type: string
+                          default: us-east-1
+                        accessKeySecret:
+                          description: Secret containing AWS credentials
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            accessKeyField:
+                              type: string
+                              default: access-key
+                            secretKeyField:
+                              type: string
+                              default: secret-key
+
+                    gcs:
+                      description: Google Cloud Storage configuration
+                      type: object
+                      properties:
+                        bucket:
+                          type: string
+                        credentialsSecret:
+                          type: string
+
+                    azure:
+                      description: Azure Blob Storage configuration
+                      type: object
+                      properties:
+                        accountName:
+                          type: string
+                        container:
+                          type: string
+                        credentialsSecret:
+                          type: string
+
+                database:
+                  description: Database configuration for metadata
+                  type: object
+                  properties:
+                    type:
+                      description: Database type
+                      type: string
+                      enum: [embedded, postgres, mysql]
+                      default: embedded
+
+                    embedded:
+                      description: Embedded BoltDB configuration
+                      type: object
+                      properties:
+                        storageSize:
+                          type: string
+                          default: 1Gi
+
+                    postgres:
+                      description: PostgreSQL configuration
+                      type: object
+                      properties:
+                        host:
+                          type: string
+                        port:
+                          type: integer
+                          default: 5432
+                        database:
+                          type: string
+                        credentialsSecret:
+                          type: string
+
+                    mysql:
+                      description: MySQL configuration
+                      type: object
+                      properties:
+                        host:
+                          type: string
+                        port:
+                          type: integer
+                          default: 3306
+                        database:
+                          type: string
+                        credentialsSecret:
+                          type: string
+
+                rbac:
+                  description: RBAC configuration
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+
+                    keycloak:
+                      description: Keycloak integration
+                      type: object
+                      properties:
+                        url:
+                          type: string
+                        realm:
+                          type: string
+                        clientId:
+                          type: string
+                        clientSecretRef:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            key:
+                              type: string
+                              default: client-secret
+
+                supplyChain:
+                  description: Supply chain security configuration
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+
+                    signing:
+                      description: Artifact signing configuration
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        keySize:
+                          type: integer
+                          enum: [2048, 4096]
+                          default: 2048
+                        keySecretRef:
+                          description: Secret containing signing keys
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            privateKeyField:
+                              type: string
+                              default: private-key
+                            publicKeyField:
+                              type: string
+                              default: public-key
+
+                    sbom:
+                      description: SBOM configuration
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        defaultFormat:
+                          type: string
+                          enum: [spdx, cyclonedx]
+                          default: spdx
+
+                metrics:
+                  description: Metrics and observability configuration
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: true
+
+                    prometheus:
+                      description: Prometheus metrics configuration
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: true
+                        port:
+                          type: integer
+                          default: 8081
+                        path:
+                          type: string
+                          default: /metrics
+                        serviceMonitor:
+                          description: Create ServiceMonitor for Prometheus Operator
+                          type: boolean
+                          default: false
+
+                    tracing:
+                      description: Distributed tracing configuration
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                        jaeger:
+                          type: object
+                          properties:
+                            endpoint:
+                              type: string
+                            samplingRate:
+                              type: number
+                              format: double
+                              minimum: 0.0
+                              maximum: 1.0
+                              default: 0.1
+
+                networking:
+                  description: Networking configuration
+                  type: object
+                  properties:
+                    service:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [ClusterIP, NodePort, LoadBalancer]
+                          default: ClusterIP
+                        port:
+                          type: integer
+                          default: 8080
+                        annotations:
+                          type: object
+                          additionalProperties:
+                            type: string
+
+                    ingress:
+                      type: object
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                        className:
+                          type: string
+                        host:
+                          type: string
+                        tls:
+                          type: object
+                          properties:
+                            enabled:
+                              type: boolean
+                              default: false
+                            secretName:
+                              type: string
+                        annotations:
+                          type: object
+                          additionalProperties:
+                            type: string
+
+                resources:
+                  description: Resource requirements
+                  type: object
+                  properties:
+                    requests:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                          default: 100m
+                        memory:
+                          type: string
+                          default: 128Mi
+                    limits:
+                      type: object
+                      properties:
+                        cpu:
+                          type: string
+                          default: 1000m
+                        memory:
+                          type: string
+                          default: 512Mi
+
+                autoscaling:
+                  description: Horizontal Pod Autoscaler configuration
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    minReplicas:
+                      type: integer
+                      minimum: 1
+                      default: 1
+                    maxReplicas:
+                      type: integer
+                      minimum: 1
+                      default: 10
+                    targetCPUUtilization:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 80
+                    targetMemoryUtilization:
+                      type: integer
+                      minimum: 1
+                      maximum: 100
+                      default: 80
+
+                podDisruptionBudget:
+                  description: Pod Disruption Budget configuration
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    minAvailable:
+                      oneOf:
+                        - type: integer
+                        - type: string
+                    maxUnavailable:
+                      oneOf:
+                        - type: integer
+                        - type: string
+
+                securityContext:
+                  description: Security context configuration
+                  type: object
+                  properties:
+                    runAsNonRoot:
+                      type: boolean
+                      default: true
+                    runAsUser:
+                      type: integer
+                      format: int64
+                      default: 1000
+                    runAsGroup:
+                      type: integer
+                      format: int64
+                      default: 1000
+                    fsGroup:
+                      type: integer
+                      format: int64
+                      default: 1000
+                    seccompProfile:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          default: RuntimeDefault
+
+                affinity:
+                  description: Pod affinity configuration
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+
+                tolerations:
+                  description: Pod tolerations
+                  type: array
+                  items:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+
+                nodeSelector:
+                  description: Node selector
+                  type: object
+                  additionalProperties:
+                    type: string
+
+            status:
+              description: ZotArtifactStoreStatus defines the observed state of ZotArtifactStore
+              type: object
+              properties:
+                phase:
+                  description: Current phase of the deployment
+                  type: string
+                  enum: [Pending, Running, Failed, Upgrading]
+
+                conditions:
+                  description: Current conditions
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum: [True, False, Unknown]
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+
+                replicas:
+                  description: Number of ready replicas
+                  type: integer
+                  format: int32
+
+                endpoints:
+                  description: Service endpoints
+                  type: object
+                  properties:
+                    api:
+                      type: string
+                    metrics:
+                      type: string
+
+                version:
+                  description: Deployed version
+                  type: string
+
+                observedGeneration:
+                  description: Most recent generation observed
+                  type: integer
+                  format: int64
+
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Replicas
+          type: integer
+          jsonPath: .status.replicas
+        - name: Version
+          type: string
+          jsonPath: .status.version
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+
+      subresources:
+        status: {}
+        scale:
+          specReplicasPath: .spec.replicas
+          statusReplicasPath: .status.replicas

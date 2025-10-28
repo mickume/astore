@@ -1,0 +1,987 @@
+openapi: 3.0.3
+info:
+  title: Zot Artifact Store API
+  description: |
+    Enterprise-grade OCI artifact storage with S3-compatible API, RBAC, supply chain security, and observability.
+
+    ## Features
+    - S3-compatible API for artifact storage
+    - Role-based access control (RBAC) with Keycloak integration
+    - Supply chain security (signatures, SBOM, attestations)
+    - Prometheus metrics and health checks
+    - Multipart uploads for large artifacts
+
+    ## Authentication
+    Most endpoints require JWT authentication via Keycloak. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <jwt-token>
+    ```
+  version: 1.0.0
+  contact:
+    name: Zot Artifact Store Team
+    url: https://github.com/candlekeep/zot-artifact-store
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://artifacts.example.com
+    description: Production server
+
+tags:
+  - name: S3 API
+    description: S3-compatible artifact storage operations
+  - name: RBAC
+    description: Role-based access control
+  - name: Supply Chain
+    description: Supply chain security (signatures, SBOMs, attestations)
+  - name: Metrics
+    description: Prometheus metrics and health checks
+
+security:
+  - BearerAuth: []
+
+paths:
+  # S3 API Endpoints
+  /s3/{bucket}:
+    put:
+      tags: [S3 API]
+      summary: Create bucket
+      description: Creates a new bucket for storing artifacts
+      operationId: createBucket
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+      responses:
+        '200':
+          description: Bucket created successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      tags: [S3 API]
+      summary: List objects in bucket
+      description: Lists all objects in a bucket with optional prefix filtering
+      operationId: listObjects
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - name: prefix
+          in: query
+          description: Filter objects by prefix
+          schema:
+            type: string
+        - name: max-keys
+          in: query
+          description: Maximum number of keys to return
+          schema:
+            type: integer
+            default: 1000
+            maximum: 1000
+      responses:
+        '200':
+          description: List of objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListObjectsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [S3 API]
+      summary: Delete bucket
+      description: Deletes an empty bucket
+      operationId: deleteBucket
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+      responses:
+        '204':
+          description: Bucket deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Bucket not empty
+
+  /s3/{bucket}/{key}:
+    put:
+      tags: [S3 API]
+      summary: Upload object
+      description: Uploads an artifact to the specified bucket and key
+      operationId: putObject
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+        - name: Content-MD5
+          in: header
+          description: Base64-encoded MD5 digest
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Object uploaded successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: Object too large
+
+    get:
+      tags: [S3 API]
+      summary: Download object
+      description: Downloads an artifact from the specified bucket and key
+      operationId: getObject
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+        - name: Range
+          in: header
+          description: Byte range for partial downloads
+          schema:
+            type: string
+            example: bytes=0-1023
+      responses:
+        '200':
+          description: Object content
+          headers:
+            Content-Type:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+            ETag:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Partial content (range request)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    head:
+      tags: [S3 API]
+      summary: Get object metadata
+      description: Retrieves metadata for an object without downloading it
+      operationId: headObject
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: Object metadata
+          headers:
+            Content-Type:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+            ETag:
+              schema:
+                type: string
+            Last-Modified:
+              schema:
+                type: string
+                format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [S3 API]
+      summary: Delete object
+      description: Deletes an artifact from the specified bucket and key
+      operationId: deleteObject
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '204':
+          description: Object deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Multipart Upload Endpoints
+  /s3/{bucket}/{key}?uploads:
+    post:
+      tags: [S3 API]
+      summary: Initiate multipart upload
+      description: Initiates a multipart upload session for large objects
+      operationId: initiateMultipartUpload
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: Multipart upload initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uploadId:
+                    type: string
+                  bucket:
+                    type: string
+                  key:
+                    type: string
+
+  /s3/{bucket}/{key}?uploadId={uploadId}&partNumber={partNumber}:
+    put:
+      tags: [S3 API]
+      summary: Upload part
+      description: Uploads a part in a multipart upload
+      operationId: uploadPart
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+        - name: uploadId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: partNumber
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Part uploaded successfully
+          headers:
+            ETag:
+              schema:
+                type: string
+
+  /s3/{bucket}/{key}?uploadId={uploadId}:
+    post:
+      tags: [S3 API]
+      summary: Complete multipart upload
+      description: Completes a multipart upload by assembling parts
+      operationId: completeMultipartUpload
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+        - name: uploadId
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      partNumber:
+                        type: integer
+                      etag:
+                        type: string
+      responses:
+        '200':
+          description: Multipart upload completed
+
+    delete:
+      tags: [S3 API]
+      summary: Abort multipart upload
+      description: Aborts a multipart upload and releases resources
+      operationId: abortMultipartUpload
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+        - name: uploadId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Multipart upload aborted
+
+  # RBAC Endpoints
+  /rbac/roles:
+    get:
+      tags: [RBAC]
+      summary: List roles
+      description: Lists all available roles
+      operationId: listRoles
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+
+    post:
+      tags: [RBAC]
+      summary: Create role
+      description: Creates a new role with specified permissions
+      operationId: createRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+
+  /rbac/roles/{roleId}:
+    get:
+      tags: [RBAC]
+      summary: Get role
+      description: Retrieves a specific role by ID
+      operationId: getRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+
+    put:
+      tags: [RBAC]
+      summary: Update role
+      description: Updates an existing role's permissions
+      operationId: updateRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated successfully
+
+    delete:
+      tags: [RBAC]
+      summary: Delete role
+      description: Deletes a role
+      operationId: deleteRole
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        '204':
+          description: Role deleted successfully
+
+  /rbac/users/{userId}/roles:
+    post:
+      tags: [RBAC]
+      summary: Assign role to user
+      description: Assigns a role to a user
+      operationId: assignRole
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleId:
+                  type: string
+      responses:
+        '200':
+          description: Role assigned successfully
+
+  /rbac/validate:
+    post:
+      tags: [RBAC]
+      summary: Validate token
+      description: Validates a JWT token and returns user permissions
+      operationId: validateToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+
+  # Supply Chain Endpoints
+  /supplychain/sign/{bucket}/{key}:
+    post:
+      tags: [Supply Chain]
+      summary: Sign artifact
+      description: Creates a digital signature for an artifact
+      operationId: signArtifact
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signedBy:
+                  type: string
+                  description: Identity of the signer
+      responses:
+        '201':
+          description: Artifact signed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignatureResponse'
+
+  /supplychain/verify/{bucket}/{key}:
+    post:
+      tags: [Supply Chain]
+      summary: Verify artifact signature
+      description: Verifies the digital signature of an artifact
+      operationId: verifyArtifact
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResponse'
+
+  /supplychain/signatures/{bucket}/{key}:
+    get:
+      tags: [Supply Chain]
+      summary: Get artifact signatures
+      description: Retrieves all signatures for an artifact
+      operationId: getSignatures
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: List of signatures
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signatures:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Signature'
+                  count:
+                    type: integer
+
+  /supplychain/sbom/{bucket}/{key}:
+    post:
+      tags: [Supply Chain]
+      summary: Attach SBOM
+      description: Attaches a Software Bill of Materials to an artifact
+      operationId: attachSBOM
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SBOMRequest'
+      responses:
+        '201':
+          description: SBOM attached successfully
+
+    get:
+      tags: [Supply Chain]
+      summary: Get SBOM
+      description: Retrieves the SBOM for an artifact
+      operationId: getSBOM
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: SBOM content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SBOMResponse'
+
+  /supplychain/attestations/{bucket}/{key}:
+    post:
+      tags: [Supply Chain]
+      summary: Add attestation
+      description: Adds an attestation (build, test, scan) to an artifact
+      operationId: addAttestation
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttestationRequest'
+      responses:
+        '201':
+          description: Attestation added successfully
+
+    get:
+      tags: [Supply Chain]
+      summary: Get attestations
+      description: Retrieves all attestations for an artifact
+      operationId: getAttestations
+      parameters:
+        - $ref: '#/components/parameters/BucketName'
+        - $ref: '#/components/parameters/ObjectKey'
+      responses:
+        '200':
+          description: List of attestations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attestations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Attestation'
+                  count:
+                    type: integer
+
+  # Metrics and Health Endpoints
+  /health:
+    get:
+      tags: [Metrics]
+      summary: Health check
+      description: Comprehensive health check for all components
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: System is unhealthy
+
+  /health/ready:
+    get:
+      tags: [Metrics]
+      summary: Readiness probe
+      description: Kubernetes readiness probe
+      operationId: readinessCheck
+      security: []
+      responses:
+        '200':
+          description: System is ready
+        '503':
+          description: System is not ready
+
+  /health/live:
+    get:
+      tags: [Metrics]
+      summary: Liveness probe
+      description: Kubernetes liveness probe
+      operationId: livenessCheck
+      security: []
+      responses:
+        '200':
+          description: System is alive
+
+  /metrics:
+    get:
+      tags: [Metrics]
+      summary: Prometheus metrics
+      description: Exports metrics in Prometheus format
+      operationId: getMetrics
+      security: []
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Keycloak
+
+  parameters:
+    BucketName:
+      name: bucket
+      in: path
+      required: true
+      description: Bucket name
+      schema:
+        type: string
+        pattern: '^[a-z0-9][a-z0-9-]*[a-z0-9]$'
+        minLength: 3
+        maxLength: 63
+
+    ObjectKey:
+      name: key
+      in: path
+      required: true
+      description: Object key (path)
+      schema:
+        type: string
+
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      description: Role ID
+      schema:
+        type: string
+
+  schemas:
+    ListObjectsResponse:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              size:
+                type: integer
+                format: int64
+              etag:
+                type: string
+              lastModified:
+                type: string
+                format: date-time
+        isTruncated:
+          type: boolean
+        nextMarker:
+          type: string
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateRoleRequest:
+      type: object
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+            enum: [read, write, delete, admin]
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    ValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        userId:
+          type: string
+        username:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+
+    SignatureResponse:
+      type: object
+      properties:
+        signatureId:
+          type: string
+        bucket:
+          type: string
+        key:
+          type: string
+        signedBy:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+        algorithm:
+          type: string
+
+    VerificationResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+        signedBy:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+
+    Signature:
+      type: object
+      properties:
+        id:
+          type: string
+        signedBy:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+        algorithm:
+          type: string
+        digest:
+          type: string
+
+    SBOMRequest:
+      type: object
+      required:
+        - format
+        - version
+        - content
+      properties:
+        format:
+          type: string
+          enum: [spdx, cyclonedx]
+        version:
+          type: string
+        content:
+          type: string
+          description: SBOM content (JSON or XML)
+        contentType:
+          type: string
+        createdBy:
+          type: string
+
+    SBOMResponse:
+      type: object
+      properties:
+        format:
+          type: string
+        version:
+          type: string
+        content:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AttestationRequest:
+      type: object
+      required:
+        - type
+        - predicate
+      properties:
+        type:
+          type: string
+          enum: [build, test, scan, deploy]
+        predicate:
+          type: object
+          description: Attestation-specific data
+        predicateType:
+          type: string
+          description: URI identifying the predicate schema
+        createdBy:
+          type: string
+
+    Attestation:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        predicate:
+          type: object
+        predicateType:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        version:
+          type: string
+        uptime:
+          type: integer
+          format: int64
+        components:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ComponentHealth'
+            storage:
+              $ref: '#/components/schemas/ComponentHealth'
+            keycloak:
+              $ref: '#/components/schemas/ComponentHealth'
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        message:
+          type: string
+        lastCheck:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

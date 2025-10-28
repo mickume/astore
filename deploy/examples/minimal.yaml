@@ -1,0 +1,25 @@
+apiVersion: artifact.zotregistry.io/v1alpha1
+kind: ZotArtifactStore
+metadata:
+  name: minimal-artifact-store
+  namespace: default
+spec:
+  replicas: 1
+  storage:
+    type: filesystem
+    size: 5Gi
+  database:
+    type: embedded
+  rbac:
+    enabled: false
+  supplyChain:
+    enabled: false
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

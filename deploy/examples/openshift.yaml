@@ -1,0 +1,104 @@
+apiVersion: artifact.zotregistry.io/v1alpha1
+kind: ZotArtifactStore
+metadata:
+  name: openshift-artifact-store
+  namespace: artifact-store
+  labels:
+    app: zot-artifact-store
+    environment: openshift
+spec:
+  replicas: 2
+
+  image:
+    repository: image-registry.openshift-image-registry.svc:5000/artifact-store/zot-artifact-store
+    tag: latest
+    pullPolicy: Always
+
+  storage:
+    type: filesystem
+    size: 50Gi
+    storageClass: ocs-storagecluster-cephfs
+
+  database:
+    type: embedded
+    embedded:
+      storageSize: 5Gi
+
+  rbac:
+    enabled: true
+    keycloak:
+      url: https://keycloak-rhsso.apps.openshift.example.com
+      realm: openshift
+      clientId: artifact-store
+      clientSecretRef:
+        name: keycloak-client-secret
+        key: secret
+
+  supplyChain:
+    enabled: true
+    signing:
+      enabled: true
+      keySize: 2048
+      keySecretRef:
+        name: artifact-signing-keys
+    sbom:
+      enabled: true
+      defaultFormat: cyclonedx
+
+  metrics:
+    enabled: true
+    prometheus:
+      enabled: true
+      serviceMonitor: true
+    tracing:
+      enabled: false
+
+  networking:
+    service:
+      type: ClusterIP
+      port: 8080
+    ingress:
+      enabled: true
+      className: openshift-default
+      host: artifacts.apps.openshift.example.com
+      tls:
+        enabled: true
+      annotations:
+        route.openshift.io/termination: "edge"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilization: 75
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  securityContext:
+    # OpenShift assigns UID/GID automatically
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: zot-artifact-store
+          topologyKey: kubernetes.io/hostname
+
+  tolerations:
+    - key: node.openshift.io/memory-pressure
+      operator: Exists
+      effect: NoSchedule
