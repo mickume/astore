@@ -1,16 +1,19 @@
 # Implementation Plan
 
-- [ ] 1. Set up project foundation and Zot integration
+- [ ] 1. Set up project foundation and dual deployment strategy
   - Fork Zot repository and establish development environment
-  - Configure build system and development toolchain
+  - Configure Podman-based build system with Containerfile
+  - Create container-based deployment configuration for development/testing
+  - Design Custom Resource Definition (CRD) for operator-based deployment
   - Set up testing infrastructure with TestContainers and mock services
-  - _Requirements: 11.1, 12.2, 14.8_
+  - _Requirements: 11.1, 12.2, 14.8, 15.1, 16.1, 16.2, 16.3_
 
-- [ ] 1.1 Initialize Zot fork and development environment
+- [ ] 1.1 Initialize Zot fork and OpenShift development environment
   - Fork the official Zot repository to create artifact store base
   - Set up Go module structure for custom extensions
-  - Configure development environment with required dependencies
-  - _Requirements: 11.1, 12.2_
+  - Configure development environment with Podman and Red Hat tooling
+  - Create Containerfile using Red Hat Universal Base Images (UBI)
+  - _Requirements: 11.1, 12.2, 15.1_
 
 - [ ] 1.2 Establish extension framework integration
   - Analyze Zot's extension system and integration points
@@ -18,17 +21,33 @@
   - Implement extension registry and lifecycle management
   - _Requirements: 11.1, 11.2, 11.5_
 
-- [ ] 1.3 Document project setup and development instructions
-  - Create comprehensive setup documentation for new developers
-  - Document development environment requirements and dependencies
-  - Provide step-by-step instructions for building and running the project
-  - _Requirements: 13.1, 13.2, 13.5_
+- [ ] 1.3 Create AI-friendly documentation and dual deployment instructions
+  - Create comprehensive setup documentation with AI-friendly structured patterns
+  - Document both container-based and operator-based deployment methods
+  - Provide step-by-step instructions for building with Podman and deploying to OpenShift
+  - Create machine-readable API specifications and interface documentation
+  - Document configuration compatibility between deployment methods
+  - _Requirements: 13.1, 13.2, 13.3, 13.5, 15.1, 16.6, 16.7_
 
 - [ ] 1.4 Set up comprehensive testing infrastructure
   - Configure TestContainers for integration testing
   - Set up mock Keycloak service for authentication testing
   - Create test fixtures and data management utilities
   - _Requirements: 14.8, 14.9_
+
+- [ ] 1.5 Create container-based deployment configuration
+  - Create docker-compose.yml and podman-compose.yml for local development
+  - Implement simple configuration file format for container deployment
+  - Create startup scripts and environment variable configuration
+  - Document container-based deployment for development and testing
+  - _Requirements: 16.1, 16.2, 16.6_
+
+- [ ] 1.6 Design Kubernetes operator Custom Resource Definition (CRD)
+  - Create ZotArtifactStore CRD with comprehensive configuration schema
+  - Design operator architecture and reconciliation logic
+  - Plan configuration translation between container and operator deployments
+  - Document operator-based deployment strategy
+  - _Requirements: 16.3, 16.4, 16.5, 16.6_
 
 - [ ] 2. Implement core S3-compatible API extension
   - Create S3 API extension structure and routing
@@ -48,22 +67,31 @@
   - Implement ListBuckets with proper metadata
   - _Requirements: 8.1, 8.3, 10.1, 10.5_
 
-- [ ] 2.3 Implement core object operations
+- [ ] 2.3 Implement core object operations with resumable upload support
   - Implement PutObject with metadata and integrity verification
   - Implement GetObject with range request support
   - Implement DeleteObject and HeadObject operations
-  - _Requirements: 1.2, 1.3, 10.1, 10.2, 10.3, 10.4_
+  - Add multipart upload support for resumable transfers (HTTP 206 Partial Content)
+  - _Requirements: 1.2, 1.3, 1.4, 10.1, 10.2, 10.3, 10.4_
 
-- [ ] 2.4 Implement object listing and advanced operations
+- [ ] 2.4 Implement multipart upload for resumable transfers
+  - Implement InitiateMultipartUpload for starting resumable uploads
+  - Implement UploadPart for uploading individual parts
+  - Implement CompleteMultipartUpload and AbortMultipartUpload operations
+  - Add multipart upload state management and cleanup
+  - _Requirements: 1.4_
+
+- [ ] 2.5 Implement object listing and advanced operations
   - Implement ListObjects with filtering and pagination
   - Implement CopyObject for artifact duplication
   - Implement presigned URL generation for temporary access
   - _Requirements: 8.2, 8.5, 10.5_
 
-- [ ] 2.5 Write comprehensive S3 API tests
-  - Create unit tests for all S3 API operations
+- [ ] 2.6 Write comprehensive S3 API tests with TDD approach
+  - Create unit tests for all S3 API operations using TDD methodology
   - Implement integration tests with storage backends
   - Add property-based tests for S3 protocol compliance
+  - Create AI-friendly test patterns with descriptive naming and documentation
   - _Requirements: 14.1, 14.2, 14.3, 14.7_
 
 - [ ] 3. Implement RBAC extension with Keycloak integration
@@ -96,10 +124,11 @@
   - Add comprehensive access control validation
   - _Requirements: 2.4, 2.5_
 
-- [ ]* 3.5 Write comprehensive RBAC tests
-  - Create unit tests for authentication and authorization
+- [ ]* 3.5 Write comprehensive RBAC tests with TDD approach
+  - Create unit tests for authentication and authorization using Given-When-Then patterns
   - Implement integration tests with mock Keycloak
   - Add end-to-end tests for complete RBAC workflows
+  - Use AI-friendly test documentation and structured error messages
   - _Requirements: 14.1, 14.2, 14.3, 14.5_
 
 - [ ] 4. Implement supply chain security extension
@@ -168,11 +197,11 @@
   - Add performance tests for large artifact handling
   - _Requirements: 14.1, 14.2, 14.6_
 
-- [ ] 6. Implement enhanced metrics and observability
+- [ ] 6. Implement enhanced metrics and OpenShift observability
   - Extend Zot's metrics with artifact-specific monitoring
   - Implement OpenTelemetry integration
-  - Create health check endpoints for Kubernetes
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - Create OpenShift-specific health check endpoints and monitoring integration
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 15.5, 15.10_
 
 - [ ] 6.1 Implement enhanced Prometheus metrics
   - Create artifact-specific metrics for uploads and downloads
@@ -180,11 +209,12 @@
   - Implement RBAC authentication and authorization metrics
   - _Requirements: 7.1, 12.5_
 
-- [ ] 6.2 Implement health checks and observability
-  - Create public health-check API endpoint for Kubernetes readiness probes
+- [ ] 6.2 Implement OpenShift-optimized health checks and observability
+  - Create OpenShift-specific health-check API endpoints for readiness probes
   - Implement OpenTelemetry integration for distributed tracing
-  - Enhance structured logging with artifact-specific information
-  - _Requirements: 7.2, 7.3, 7.4_
+  - Enhance structured logging with OpenShift logging integration
+  - Configure ServiceMonitor and PrometheusRule resources for OpenShift monitoring
+  - _Requirements: 7.2, 7.3, 7.4, 15.5, 15.10_
 
 - [ ]* 6.3 Write comprehensive observability tests
   - Create unit tests for metrics collection and reporting
@@ -330,14 +360,32 @@
   - Validate API compatibility with S3 protocol requirements
   - _Requirements: 14.4, 11.3_
 
-- [ ] 12.3 Prepare CI/CD integration foundation
-  - Design APIs compatible with Tekton and GitHub Actions workflows
-  - Create documentation for CI/CD integration patterns
-  - Implement webhook endpoints for future CI/CD integration
+- [ ] 12.3 Prepare GitHub Workflows CI/CD integration
+  - Design APIs compatible with GitHub Actions workflows
+  - Create GitHub Workflow configurations for build and deployment automation
+  - Implement webhook endpoints for GitHub integration
+  - Create GitHub Actions for artifact store operations and OpenShift deployment
   - _Requirements: 9.5_
 
-- [ ]* 12.4 Write comprehensive system tests
+- [ ] 12.4 Implement Kubernetes operator for OpenShift deployment
+  - Develop Kubernetes operator using operator-sdk framework
+  - Implement ZotArtifactStore controller and reconciliation logic
+  - Create configuration translation from CRD to Zot configuration
+  - Implement automatic OpenShift resource creation (DeploymentConfig, Service, Route, SCC)
+  - Add operator lifecycle management and status reporting
+  - _Requirements: 16.3, 16.4, 16.5_
+
+- [ ] 12.5 Implement AI-friendly documentation and error handling patterns
+  - Create structured API documentation with OpenAPI 3.0 specifications
+  - Implement comprehensive error catalog with resolution guidance
+  - Create test pattern templates for AI agent consumption
+  - Document all extension points and configuration schemas in machine-readable formats
+  - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
+
+- [ ]* 12.6 Write comprehensive system tests with TDD and AI-friendly patterns
   - Create system-level tests for complete artifact store functionality
   - Implement performance benchmarks and load testing
   - Add mutation tests to validate test suite effectiveness
-  - _Requirements: 14.5, 14.6, 14.10_
+  - Test both container-based and operator-based deployment scenarios
+  - Use AI-friendly test patterns with descriptive naming and comprehensive documentation
+  - _Requirements: 14.5, 14.6, 14.10, 16.1, 16.3_

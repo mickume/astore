@@ -16,6 +16,10 @@ This document specifies the requirements for extending the Zot OCI registry to c
 - **Bearer_Token**: Authentication mechanism using JWT or similar tokens for API access
 - **Resumable_Upload**: HTTP 206 Partial Content support for interrupted transfer recovery
 - **Integrity_Verification**: SHA256 checksum validation for uploaded and downloaded artifacts
+- **OpenShift_Platform**: Red Hat OpenShift container platform serving as the target deployment environment
+- **Podman_Runtime**: Red Hat's container runtime and build tool used instead of Docker for container operations
+- **OpenShift_Build**: Red Hat OpenShift's native build system for creating container images and deployments
+- **Red_Hat_Tooling**: Red Hat ecosystem tools and technologies used for build, deployment, and operations
 
 ## Requirements
 
@@ -191,3 +195,33 @@ This document specifies the requirements for extending the Zot OCI registry to c
 8. THE Artifact_Store SHALL maintain test fixtures and mock data that enable AI agents to generate consistent and reliable tests
 9. THE Artifact_Store SHALL provide automated test execution with detailed reporting that enables AI agents to identify and fix failing tests
 10. THE Artifact_Store SHALL implement mutation testing to validate the quality and effectiveness of the test suite itself
+
+### Requirement 15
+
+**User Story:** As a platform engineer deploying to Red Hat OpenShift, I want the artifact store to be built and deployed using Red Hat tooling and technologies, so that I can leverage OpenShift-native capabilities and maintain consistency with our Red Hat ecosystem.
+
+#### Acceptance Criteria
+
+1. THE Artifact_Store SHALL use Podman_Runtime instead of Docker for all container build and runtime operations
+2. THE Artifact_Store SHALL use OpenShift_Build for native container image builds and deployments
+3. THE Artifact_Store SHALL use OpenShift-native deployment resources including DeploymentConfig, Service, and Route objects instead of generic Kubernetes resources
+4. THE Artifact_Store SHALL integrate with OpenShift's built-in security features including Security Context Constraints (SCCs) and Pod Security Standards
+5. THE Artifact_Store SHALL leverage OpenShift's native monitoring and logging capabilities including integration with OpenShift monitoring stack and cluster logging
+6. THE Artifact_Store SHALL provide Helm charts specifically designed for OpenShift deployment with OpenShift-specific annotations and configurations
+7. THE Artifact_Store SHALL integrate with Red_Hat_Tooling ecosystem for consistent build, deployment, and operational workflows
+8. THE Artifact_Store SHALL support OpenShift's native storage classes and persistent volume management for artifact storage
+9. THE Artifact_Store SHALL provide OpenShift-specific health checks and readiness probes that integrate with OpenShift's application health monitoring
+
+### Requirement 16
+
+**User Story:** As a developer and system administrator, I want flexible deployment options for the artifact store, so that I can run it locally for development and testing, or deploy it to OpenShift for production with operator-managed lifecycle.
+
+#### Acceptance Criteria
+
+1. THE Artifact_Store SHALL be deployable as a standalone container using Podman or Docker for local development and testing
+2. THE Artifact_Store SHALL provide simple container-based deployment with minimal configuration for development environments
+3. WHEN deployed on OpenShift, THE Artifact_Store SHALL be managed and controlled via a Kubernetes operator
+4. THE Kubernetes_Operator SHALL provide a single Custom Resource Definition (CRD) for configuring all aspects of the OpenShift deployment
+5. THE Kubernetes_Operator SHALL automatically create and manage all required OpenShift resources including DeploymentConfig, Service, Route, and Security Context Constraints
+6. THE Artifact_Store SHALL maintain configuration compatibility between container-based and operator-based deployments where applicable
+7. THE Artifact_Store SHALL provide clear documentation for both deployment methods with specific use cases and configuration examples
