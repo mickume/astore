@@ -11,7 +11,8 @@
       "Bash(CGO_ENABLED=0 go test:*)",
       "Bash(make test:*)",
       "Bash(tree:*)",
-      "Bash(go build:*)"
+      "Bash(go build:*)",
+      "Read(//opt/homebrew/Cellar/go/1.25.3/libexec/src/net/**)"
     ],
     "deny": [],
     "ask": []
