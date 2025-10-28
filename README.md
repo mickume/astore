@@ -16,9 +16,12 @@ Zot Artifact Store extends the Zot OCI registry to provide:
 ## Project Status
 
 ✅ **Phase 1 Complete: Foundation** - Extension framework, testing infrastructure, and deployment setup ready
-🚧 **Phase 2 In Progress: Core S3 API** - S3-compatible API implementation
+✅ **Phase 2 Complete: Core S3 API** - Full S3-compatible API with multipart uploads and resumable downloads
+🚧 **Phase 3 Next: RBAC** - Keycloak integration and enterprise authentication
 
-### Completed Features (Phase 1)
+### Completed Features
+
+#### Phase 1: Foundation
 - ✅ Go project structure with Zot v1.4.3 integration
 - ✅ Extension framework for modular features
 - ✅ Four core extensions (stubs): S3 API, RBAC, Supply Chain, Metrics
@@ -27,6 +30,19 @@ Zot Artifact Store extends the Zot OCI registry to provide:
 - ✅ Podman build scripts and development tools
 - ✅ ZotArtifactStore CRD for Kubernetes operator
 - ✅ Comprehensive project documentation
+
+#### Phase 2: S3-Compatible API
+- ✅ Artifact metadata models with OCI digest integration
+- ✅ BoltDB metadata storage layer (buckets, artifacts, multipart uploads)
+- ✅ Complete S3 API implementation (13 endpoints)
+- ✅ Bucket operations: create, list, delete
+- ✅ Object operations: upload, download, metadata, delete, list
+- ✅ Multipart upload support for large files
+- ✅ Resumable downloads with HTTP range requests (RFC 7233)
+- ✅ Custom metadata support with X-Amz-Meta-* headers
+- ✅ Filesystem-based storage with atomic operations
+- ✅ Comprehensive test coverage (17/17 tests passing)
+- ✅ S3 API documentation with client examples
 
 ## Architecture
 
@@ -71,6 +87,31 @@ make build
 ```bash
 ./bin/zot-artifact-store --config config/config.yaml
 ```
+
+### Using the S3 API
+
+```bash
+# Create a bucket
+curl -X PUT http://localhost:8080/s3/artifacts
+
+# Upload an artifact
+curl -X PUT \
+  -H "Content-Type: application/gzip" \
+  -H "X-Amz-Meta-Version: 1.0.0" \
+  --data-binary @myapp-1.0.0.tar.gz \
+  http://localhost:8080/s3/artifacts/myapp-1.0.0.tar.gz
+
+# Download an artifact
+curl http://localhost:8080/s3/artifacts/myapp-1.0.0.tar.gz -o myapp.tar.gz
+
+# List artifacts in bucket
+curl http://localhost:8080/s3/artifacts
+
+# Delete an artifact
+curl -X DELETE http://localhost:8080/s3/artifacts/myapp-1.0.0.tar.gz
+```
+
+See [S3 API Documentation](docs/S3_API.md) for complete API reference.
 
 ## Development
 
@@ -119,10 +160,19 @@ make coverage
 
 ## Documentation
 
+### User Documentation
+- [Getting Started](docs/GETTING_STARTED.md)
+- [S3 API Reference](docs/S3_API.md) - Complete S3-compatible API documentation with examples
+
+### Planning Documentation
 - [Product Requirements](docs/prd.md)
 - [Detailed Requirements](.kiro/specs/zot-artifact-store/requirements.md)
 - [Design Document](.kiro/specs/zot-artifact-store/design.md)
 - [Implementation Tasks](.kiro/specs/zot-artifact-store/tasks.md)
+
+### Implementation Status
+- [Phase 1: Foundation](docs/PHASE1_COMPLETE.md) - Extension framework and infrastructure
+- [Phase 2: S3 API](docs/PHASE2_COMPLETE.md) - S3-compatible API implementation
 
 ## Deployment
 
