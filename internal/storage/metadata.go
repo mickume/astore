@@ -17,6 +17,9 @@ var (
 	uploadProgressBucket = []byte("upload_progress")
 	policiesBucket       = []byte("policies")
 	auditLogsBucket      = []byte("audit_logs")
+	signaturesBucket     = []byte("signatures")
+	sbomsBucket          = []byte("sboms")
+	attestationsBucket   = []byte("attestations")
 )
 
 // MetadataStore manages artifact and bucket metadata using BoltDB
@@ -33,7 +36,7 @@ func NewMetadataStore(dbPath string) (*MetadataStore, error) {
 
 	// Create buckets if they don't exist
 	err = db.Update(func(tx *bolt.Tx) error {
-		for _, bucket := range [][]byte{bucketsBucket, artifactsBucket, multipartBucket, uploadProgressBucket, policiesBucket, auditLogsBucket} {
+		for _, bucket := range [][]byte{bucketsBucket, artifactsBucket, multipartBucket, uploadProgressBucket, policiesBucket, auditLogsBucket, signaturesBucket, sbomsBucket, attestationsBucket} {
 			if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
 				return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
 			}
@@ -390,6 +393,199 @@ func (s *MetadataStore) ListAuditLogs(userID string, resource string, startTime,
 		return nil, err
 	}
 	return logs, nil
+}
+
+// === Signature Operations ===
+
+// StoreSignature stores an artifact signature
+func (s *MetadataStore) StoreSignature(signature *models.Signature) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(signaturesBucket)
+		data, err := json.Marshal(signature)
+		if err != nil {
+			return fmt.Errorf("failed to marshal signature: %w", err)
+		}
+		return b.Put([]byte(signature.ID), data)
+	})
+}
+
+// GetSignature retrieves a signature by ID
+func (s *MetadataStore) GetSignature(id string) (*models.Signature, error) {
+	var signature models.Signature
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(signaturesBucket)
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("signature %s not found", id)
+		}
+		return json.Unmarshal(data, &signature)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &signature, nil
+}
+
+// ListSignaturesForArtifact lists all signatures for an artifact
+func (s *MetadataStore) ListSignaturesForArtifact(artifactID string) ([]*models.Signature, error) {
+	var signatures []*models.Signature
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(signaturesBucket)
+		return b.ForEach(func(k, v []byte) error {
+			var signature models.Signature
+			if err := json.Unmarshal(v, &signature); err != nil {
+				return err
+			}
+			if signature.ArtifactID == artifactID {
+				signatures = append(signatures, &signature)
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return signatures, nil
+}
+
+// DeleteSignature deletes a signature
+func (s *MetadataStore) DeleteSignature(id string) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(signaturesBucket)
+		return b.Delete([]byte(id))
+	})
+}
+
+// === SBOM Operations ===
+
+// StoreSBOM stores an SBOM
+func (s *MetadataStore) StoreSBOM(sbom *models.SBOM) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(sbomsBucket)
+		data, err := json.Marshal(sbom)
+		if err != nil {
+			return fmt.Errorf("failed to marshal SBOM: %w", err)
+		}
+		return b.Put([]byte(sbom.ID), data)
+	})
+}
+
+// GetSBOM retrieves an SBOM by ID
+func (s *MetadataStore) GetSBOM(id string) (*models.SBOM, error) {
+	var sbom models.SBOM
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(sbomsBucket)
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("SBOM %s not found", id)
+		}
+		return json.Unmarshal(data, &sbom)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &sbom, nil
+}
+
+// GetSBOMForArtifact retrieves the SBOM for an artifact
+func (s *MetadataStore) GetSBOMForArtifact(artifactID string) (*models.SBOM, error) {
+	var sbom *models.SBOM
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(sbomsBucket)
+		return b.ForEach(func(k, v []byte) error {
+			var s models.SBOM
+			if err := json.Unmarshal(v, &s); err != nil {
+				return err
+			}
+			if s.ArtifactID == artifactID {
+				sbom = &s
+				return nil
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if sbom == nil {
+		return nil, fmt.Errorf("SBOM not found for artifact %s", artifactID)
+	}
+	return sbom, nil
+}
+
+// DeleteSBOM deletes an SBOM
+func (s *MetadataStore) DeleteSBOM(id string) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(sbomsBucket)
+		return b.Delete([]byte(id))
+	})
+}
+
+// === Attestation Operations ===
+
+// StoreAttestation stores an attestation
+func (s *MetadataStore) StoreAttestation(attestation *models.Attestation) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attestationsBucket)
+		data, err := json.Marshal(attestation)
+		if err != nil {
+			return fmt.Errorf("failed to marshal attestation: %w", err)
+		}
+		return b.Put([]byte(attestation.ID), data)
+	})
+}
+
+// GetAttestation retrieves an attestation by ID
+func (s *MetadataStore) GetAttestation(id string) (*models.Attestation, error) {
+	var attestation models.Attestation
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attestationsBucket)
+		data := b.Get([]byte(id))
+		if data == nil {
+			return fmt.Errorf("attestation %s not found", id)
+		}
+		return json.Unmarshal(data, &attestation)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &attestation, nil
+}
+
+// ListAttestationsForArtifact lists all attestations for an artifact
+func (s *MetadataStore) ListAttestationsForArtifact(artifactID string) ([]*models.Attestation, error) {
+	var attestations []*models.Attestation
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attestationsBucket)
+		return b.ForEach(func(k, v []byte) error {
+			var attestation models.Attestation
+			if err := json.Unmarshal(v, &attestation); err != nil {
+				return err
+			}
+			if attestation.ArtifactID == artifactID {
+				attestations = append(attestations, &attestation)
+			}
+			return nil
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return attestations, nil
+}
+
+// DeleteAttestation deletes an attestation
+func (s *MetadataStore) DeleteAttestation(id string) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(attestationsBucket)
+		return b.Delete([]byte(id))
+	})
 }
 
 // === Helper Functions ===
