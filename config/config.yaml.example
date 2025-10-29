@@ -1,73 +1,357 @@
-# Zot Artifact Store Configuration Example
-# For container deployment
+# Zot Artifact Store Configuration
+# Complete configuration example with all available options
 
+# ============================================================================
 # HTTP Server Configuration
+# ============================================================================
 http:
+  # Listen address (0.0.0.0 for all interfaces, 127.0.0.1 for localhost only)
   address: 0.0.0.0
+
+  # Server port
   port: "8080"
 
-  # TLS Configuration (optional, recommended for production)
+  # TLS Configuration (recommended for production)
+  # Uncomment to enable HTTPS
   # tls:
-  #   cert: /zot/config/server.crt
-  #   key: /zot/config/server.key
-
-  # Authentication (configure for production)
-  # auth:
-  #   htpasswd:
-  #     path: /zot/config/htpasswd
-  #   bearer:
-  #     realm: "Zot Artifact Store"
-  #     service: "zot"
+  #   cert: /zot/config/tls/server.crt
+  #   key: /zot/config/tls/server.key
+  #   # Optional: Client certificate authentication
+  #   cacert: /zot/config/tls/ca.crt
 
   # CORS Configuration
-  allowOrigin: "*"
+  # Controls cross-origin resource sharing
+  cors:
+    allowOrigin: "*"
+    allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - HEAD
+      - OPTIONS
+    allowHeaders:
+      - Authorization
+      - Content-Type
+      - X-Amz-Meta-*
+      - Range
+    exposeHeaders:
+      - ETag
+      - Content-Range
+      - Content-Length
 
+  # Request size limits
+  # realm: "Zot Artifact Store"
+  # readOnly: false
+
+# ============================================================================
 # Storage Configuration
+# ============================================================================
 storage:
-  # Root directory for artifact storage
+  # Root directory for local filesystem storage
+  # Used by S3 API extension and file-based artifact storage
   rootDirectory: /zot/data
 
-  # Enable deduplication
+  # Enable storage deduplication (saves disk space)
   dedupe: true
 
-  # Garbage collection settings
+  # Garbage collection for orphaned data
   gc: true
   gcDelay: 1h
+  gcInterval: 24h
 
-  # Storage driver configuration
+  # Sub-paths (optional)
+  # Can be used to separate different storage tiers or types
+  # subPaths:
+  #   /hot:
+  #     rootDirectory: /zot/data/hot
+  #     dedupe: true
+  #   /archive:
+  #     rootDirectory: /zot/data/archive
+  #     dedupe: true
+
+  # Cloud Storage Backend Configuration (optional)
+  # When enabled, artifacts are stored in cloud object storage
+  # instead of local filesystem
+
+  # AWS S3 Backend
   # storageDriver:
   #   name: s3
   #   region: us-east-1
   #   bucket: zot-artifacts
+  #   # Optional: Use custom S3 endpoint (for MinIO, etc.)
+  #   # endpoint: https://minio.example.com
+  #   # Optional: Access credentials (use IAM roles if possible)
+  #   # accesskey: AKIAIOSFODNN7EXAMPLE
+  #   # secretkey: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
   #   secure: true
+  #   skipverify: false
 
+  # Google Cloud Storage Backend
+  # storageDriver:
+  #   name: gcs
+  #   bucket: zot-artifacts
+  #   # Optional: Path to service account JSON key
+  #   # keyfile: /zot/config/gcs-key.json
+
+  # Azure Blob Storage Backend
+  # storageDriver:
+  #   name: azure
+  #   accountname: zotartifacts
+  #   # Use either account key or managed identity
+  #   # accountkey: your-account-key
+  #   container: artifacts
+
+# ============================================================================
 # Logging Configuration
+# ============================================================================
 log:
+  # Log level: trace, debug, info, warn, error, fatal, panic
   level: info
+
+  # Output file (optional, defaults to stdout if not specified)
   output: /zot/logs/zot-artifact-store.log
+
+  # Audit log for security events (optional)
   audit: /zot/logs/audit.log
 
-# Extensions Configuration (to be implemented)
-# extensions:
-#   s3api:
-#     enabled: true
-#   rbac:
-#     enabled: true
-#     keycloak:
-#       url: https://keycloak.example.com
-#       realm: zot
-#       clientId: zot-artifact-store
-#   supplychain:
-#     enabled: true
-#     signing:
-#       providers:
-#         - cosign
-#         - notary
-#     sbom:
-#       formats:
-#         - spdx
-#         - cyclonedx
-#   metrics:
-#     enabled: true
-#     prometheus:
-#       enabled: true
+# ============================================================================
+# Extensions Configuration
+# Extensions provide additional functionality on top of core Zot registry
+# ============================================================================
+extensions:
+  # --------------------------------------------------------------------------
+  # S3-Compatible API Extension
+  # Provides S3-compatible REST API for binary artifact storage
+  # --------------------------------------------------------------------------
+  s3api:
+    # Enable/disable extension
+    enabled: true
+
+    # API base path (endpoints will be under /s3/*)
+    basePath: /s3
+
+    # Maximum single upload size (in bytes)
+    # Default: 5GB (5 * 1024 * 1024 * 1024)
+    maxUploadSize: 5368709120
+
+    # Enable multipart uploads for large files
+    enableMultipart: true
+
+    # Enable pre-signed URLs (for time-limited direct access)
+    enablePresignedURL: true
+
+    # Data directory for artifacts (overrides storage.rootDirectory)
+    # Defaults to storage.rootDirectory if not specified
+    # dataDir: /zot/data/artifacts
+
+    # Path to metadata database (BoltDB)
+    # Stores bucket metadata, object metadata, multipart upload state
+    metadataDBPath: /zot/data/metadata.db
+
+  # --------------------------------------------------------------------------
+  # RBAC (Role-Based Access Control) Extension
+  # Provides authentication and authorization with Keycloak integration
+  # --------------------------------------------------------------------------
+  rbac:
+    # Enable/disable extension
+    enabled: true
+
+    # Keycloak configuration for JWT token validation
+    keycloak:
+      # Keycloak server URL
+      url: https://keycloak.example.com
+
+      # Keycloak realm name
+      realm: zot-artifact-store
+
+      # Client ID for this application
+      clientId: zot-client
+
+      # Client secret (optional, for confidential clients)
+      # clientSecret: your-client-secret
+
+    # Enable comprehensive audit logging
+    # Logs all authentication attempts and authorization decisions
+    auditLogging: true
+
+    # Allow anonymous GET requests (downloads without authentication)
+    # Set to false for strict security, true for public read access
+    allowAnonymousGet: false
+
+    # Path to metadata database for policies and audit logs
+    # Defaults to same database as S3 API extension
+    metadataDBPath: /zot/data/metadata.db
+
+  # --------------------------------------------------------------------------
+  # Supply Chain Security Extension
+  # Provides artifact signing, SBOM, and attestation capabilities
+  # --------------------------------------------------------------------------
+  supplychain:
+    # Enable/disable extension
+    enabled: true
+
+    # Artifact signing configuration
+    signing:
+      # Enable signing functionality
+      enabled: true
+
+      # Supported signing providers
+      # Options: rsa, cosign, notary
+      providers:
+        - rsa
+
+      # Verify signatures on download (strict mode)
+      verify: false
+
+    # Software Bill of Materials (SBOM) configuration
+    sbom:
+      # Enable SBOM support
+      enabled: true
+
+      # Supported SBOM formats
+      # Options: spdx, cyclonedx
+      formats:
+        - spdx
+        - cyclonedx
+
+      # Require SBOM for all artifacts (strict mode)
+      require: false
+
+    # Attestation configuration
+    attestation:
+      # Enable attestation support
+      enabled: true
+
+      # Supported attestation types
+      # Options: build, test, scan, provenance, vulnerability, quality
+      types:
+        - build
+        - test
+        - scan
+        - provenance
+
+    # Path to metadata database for signatures, SBOMs, and attestations
+    metadataDBPath: /zot/data/metadata.db
+
+    # Path to private key for signing (optional)
+    # If not specified, will generate ephemeral keys
+    # privateKeyPath: /zot/config/keys/signing-key.pem
+
+  # --------------------------------------------------------------------------
+  # Metrics & Observability Extension
+  # Provides Prometheus metrics, health checks, and OpenTelemetry tracing
+  # --------------------------------------------------------------------------
+  metrics:
+    # Enable/disable extension
+    enabled: true
+
+    # Prometheus metrics configuration
+    prometheus:
+      # Enable Prometheus metrics endpoint
+      enabled: true
+
+      # Metrics endpoint path
+      path: /metrics
+
+    # OpenTelemetry distributed tracing configuration
+    tracing:
+      # Enable tracing
+      enabled: false
+
+      # OTLP endpoint (e.g., Jaeger, Zipkin, etc.)
+      endpoint: http://jaeger:4317
+
+      # Service name for traces
+      serviceName: zot-artifact-store
+
+    # Health check endpoints configuration
+    health:
+      # Enable health checks
+      enabled: true
+
+      # Readiness probe path (Kubernetes readiness)
+      # Returns 200 when service is ready to accept traffic
+      readinessPath: /health/ready
+
+      # Liveness probe path (Kubernetes liveness)
+      # Returns 200 when service is alive
+      livenessPath: /health/live
+
+    # Path to metadata database for health checks
+    metadataDBPath: /zot/data/metadata.db
+
+# ============================================================================
+# Authentication Configuration (Zot native)
+# Optional: Basic HTTP authentication (htpasswd)
+# For production, use RBAC extension with Keycloak instead
+# ============================================================================
+# auth:
+#   htpasswd:
+#     path: /zot/config/htpasswd
+#   # Bearer token configuration
+#   bearer:
+#     realm: "Zot Artifact Store"
+#     service: "zot-artifact-store"
+#     # JWT signing key
+#     # cert: /zot/config/auth/public.pem
+#   # LDAP configuration
+#   # ldap:
+#   #   address: ldap.example.com
+#   #   port: 389
+#   #   baseDN: "dc=example,dc=com"
+#   #   userAttribute: "uid"
+
+# ============================================================================
+# Performance & Limits
+# ============================================================================
+# limits:
+#   # Maximum concurrent requests
+#   maxConcurrentRequests: 100
+#
+#   # Request timeout
+#   requestTimeout: 300s
+#
+#   # Maximum request body size
+#   maxRequestBodySize: 10737418240  # 10GB
+
+# ============================================================================
+# Clustering (future)
+# ============================================================================
+# cluster:
+#   enabled: false
+#   members:
+#     - http://node1:8080
+#     - http://node2:8080
+#     - http://node3:8080
+
+# ============================================================================
+# Example Usage Notes
+# ============================================================================
+#
+# 1. Basic Setup (Development):
+#    - Use default configuration with local filesystem storage
+#    - Enable all extensions
+#    - No authentication (or simple htpasswd)
+#
+# 2. Production Setup:
+#    - Enable TLS
+#    - Configure RBAC extension with Keycloak
+#    - Use cloud storage backend (S3/GCS/Azure)
+#    - Enable metrics and tracing
+#    - Configure audit logging
+#    - Set appropriate resource limits
+#
+# 3. High Security Setup:
+#    - Require TLS with client certificates
+#    - Enable RBAC with strict policies
+#    - Disable anonymous access (allowAnonymousGet: false)
+#    - Require signatures and SBOMs (verify: true, require: true)
+#    - Enable comprehensive audit logging
+#
+# 4. Cloud-Native Setup (Kubernetes/OpenShift):
+#    - Use cloud storage backend matching your provider
+#    - Configure health check endpoints for probes
+#    - Enable Prometheus metrics for monitoring
+#    - Enable OpenTelemetry tracing for observability
+#    - Use environment variable substitution for secrets

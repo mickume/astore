@@ -1,0 +1,35 @@
+# Zot Artifact Store - Minimal Configuration
+# Quick start configuration for development and testing
+
+# HTTP Server
+http:
+  address: 0.0.0.0
+  port: "8080"
+
+# Storage
+storage:
+  rootDirectory: /tmp/zot-artifacts
+
+# Logging
+log:
+  level: info
+
+# Extensions (all enabled with defaults)
+extensions:
+  s3api:
+    enabled: true
+    metadataDBPath: /tmp/zot-artifacts/metadata.db
+
+  rbac:
+    enabled: false  # Disable for local development
+
+  supplychain:
+    enabled: true
+    metadataDBPath: /tmp/zot-artifacts/metadata.db
+
+  metrics:
+    enabled: true
+    prometheus:
+      enabled: true
+    health:
+      enabled: true

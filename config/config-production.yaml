@@ -1,0 +1,117 @@
+# Zot Artifact Store - Production Configuration
+# Secure configuration for production deployments
+
+# HTTP Server with TLS
+http:
+  address: 0.0.0.0
+  port: "8443"
+
+  # TLS enabled
+  tls:
+    cert: /zot/config/tls/server.crt
+    key: /zot/config/tls/server.key
+    cacert: /zot/config/tls/ca.crt
+
+  # Strict CORS
+  cors:
+    allowOrigin: "https://artifacts.example.com"
+    allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - HEAD
+    allowHeaders:
+      - Authorization
+      - Content-Type
+      - X-Amz-Meta-*
+      - Range
+    exposeHeaders:
+      - ETag
+      - Content-Range
+
+# Cloud storage backend (S3)
+storage:
+  rootDirectory: /zot/data
+  dedupe: true
+  gc: true
+  gcDelay: 24h
+  gcInterval: 168h  # Weekly
+
+  # Production S3 backend
+  storageDriver:
+    name: s3
+    region: us-east-1
+    bucket: production-zot-artifacts
+    secure: true
+    skipverify: false
+
+# Production logging
+log:
+  level: warn
+  output: /zot/logs/zot-artifact-store.log
+  audit: /zot/logs/audit.log
+
+# Extensions with production settings
+extensions:
+  # S3 API with strict limits
+  s3api:
+    enabled: true
+    basePath: /s3
+    maxUploadSize: 10737418240  # 10GB
+    enableMultipart: true
+    enablePresignedURL: true
+    metadataDBPath: /zot/data/metadata.db
+
+  # RBAC enabled with Keycloak
+  rbac:
+    enabled: true
+    keycloak:
+      url: https://keycloak.example.com
+      realm: production
+      clientId: zot-artifact-store
+      clientSecret: ${KEYCLOAK_CLIENT_SECRET}  # From environment
+    auditLogging: true
+    allowAnonymousGet: false  # Strict security
+    metadataDBPath: /zot/data/metadata.db
+
+  # Supply chain with strict verification
+  supplychain:
+    enabled: true
+    signing:
+      enabled: true
+      providers:
+        - rsa
+      verify: true  # Require valid signatures
+    sbom:
+      enabled: true
+      formats:
+        - spdx
+        - cyclonedx
+      require: true  # Require SBOM
+    attestation:
+      enabled: true
+      types:
+        - build
+        - test
+        - scan
+        - provenance
+        - vulnerability
+    metadataDBPath: /zot/data/metadata.db
+    privateKeyPath: /zot/config/keys/signing-key.pem
+
+  # Full observability
+  metrics:
+    enabled: true
+    prometheus:
+      enabled: true
+      path: /metrics
+    tracing:
+      enabled: true
+      endpoint: http://jaeger-collector:4317
+      serviceName: zot-artifact-store-production
+    health:
+      enabled: true
+      readinessPath: /health/ready
+      livenessPath: /health/live
+    metadataDBPath: /zot/data/metadata.db
