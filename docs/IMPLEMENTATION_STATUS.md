@@ -17,13 +17,13 @@ The Zot Artifact Store is an extension of the Zot OCI registry for storing binar
 | 5 | Storage | ✅ Complete | 4/4 tasks | ✅ 16/16 passing | Multi-cloud storage |
 | 6 | Metrics | ✅ Complete | 3/3 tasks | ✅ 14/14 passing | Prometheus, OpenTelemetry, health |
 | 7 | Go Client | ✅ Complete | 3/3 tasks | ✅ 43/43 passing | Go SDK |
-| 8 | Python Client | ⏳ Planned | 0/3 tasks | - | Python SDK |
+| 8 | Python Client | ✅ Complete | 3/3 tasks | ✅ 38/38 passing | Python SDK |
 | 9 | JS Client | ⏳ Planned | 0/3 tasks | - | JavaScript/TypeScript SDK |
-| 10 | CLI | ⏳ Planned | 0/3 tasks | - | Command-line tool |
+| 10 | CLI | ✅ Complete | 3/3 tasks | ✅ 3/3 passing | Command-line tool |
 | 11 | Error Handling | ✅ Complete | 3/3 tasks | ✅ Passing | Retry, circuit breakers |
 | 12 | Integration | ✅ Complete | 6/6 tasks | ✅ Passing | Testing, operator, OpenAPI |
 
-**Overall Progress:** 59/60 tasks complete (98% - Nearly complete)
+**Overall Progress:** 65/66 tasks complete (98% - Nearly complete)
 
 ## Detailed Phase Status
 
@@ -258,18 +258,153 @@ Coverage: Full client interface coverage
 
 ---
 
-### ⏳ Phase 8-10: Planned Features
+### ✅ Phase 8: Python Client SDK (COMPLETE)
 
-#### Phase 8-9: Client Libraries
-- Python SDK
+**Completion:** 100% (3/3 tasks)
+
+**Delivered:**
+- Python client library foundation with requests library
+- Core artifact operations (upload, download, list, delete)
+- Bucket management operations
+- Multipart upload support for large files
+- Supply chain operations (sign, verify, SBOM, attestations)
+- Progress callbacks for uploads and downloads
+- Bearer token authentication
+- Custom metadata support
+- Comprehensive error handling with exception hierarchy
+- 38/38 tests passing with pytest
+
+**Documentation:** [Phase 8 Complete](PHASE8_COMPLETE.md)
+
+**Test Results:**
+```
+✅ 38 Python client SDK tests (pytest)
+Coverage: Full client interface coverage
+```
+
+**Test Cases:**
+1. **Client Configuration** (7 tests)
+   - Client creation with valid config
+   - Missing base URL validation
+   - Token authentication
+   - Custom timeout and user agent
+   - TLS configuration
+
+2. **Token Management** (1 test)
+   - Update authentication token
+
+3. **URL Building** (2 tests)
+   - URL construction from paths
+
+4. **Bucket Operations** (3 tests)
+   - Create, delete, list buckets
+
+5. **Object Operations** (9 tests)
+   - Upload with metadata
+   - Download with range requests
+   - Get metadata, delete, list, copy
+
+6. **Multipart Upload** (4 tests)
+   - Initiate, upload part, complete, abort
+
+7. **Error Handling** (2 tests)
+   - 404 Not Found
+   - 409 Conflict
+
+8. **Progress Callbacks** (2 tests)
+   - Upload and download progress tracking
+
+9. **Supply Chain Operations** (8 tests)
+   - Sign, verify, get signatures
+   - Attach and get SBOM
+   - Add and get attestations
+
+**Key Features:**
+- Pythonic API with type hints
+- requests-based HTTP client
+- Comprehensive exception hierarchy (8 exception types)
+- Progress tracking with callbacks
+- Context manager support
+- Data models with dataclasses
+- Multipart upload for large files
+- Range request support for partial downloads
+
+**Package Structure:**
+- `astore_client/client.py` - Client foundation (400 lines)
+- `astore_client/operations.py` - Core operations (270 lines)
+- `astore_client/supplychain.py` - Supply chain ops (150 lines)
+- `astore_client/models.py` - Data models (100 lines)
+- `astore_client/exceptions.py` - Exception hierarchy (90 lines)
+- `tests/` - Comprehensive test suite (650 lines)
+- `setup.py` - Package setup
+- `README.md` - Package documentation (400 lines)
+
+**Installation:**
+```bash
+cd pkg/client-python
+pip install -e .
+```
+
+**Example Usage:**
+```python
+from astore_client import Client, Config
+
+config = Config(
+    base_url="https://artifacts.example.com",
+    token="your-token"
+)
+client = Client(config)
+
+# Upload artifact
+with open("app.tar.gz", "rb") as f:
+    client.upload("releases", "app-1.0.0.tar.gz", f, size,
+                  metadata={"version": "1.0.0"})
+
+# Download artifact
+with open("downloaded.tar.gz", "wb") as f:
+    client.download("releases", "app-1.0.0.tar.gz", f)
+```
+
+---
+
+### ✅ Phase 10: CLI Tool (COMPLETE)
+
+**Completion:** 100% (3/3 tasks)
+
+**Delivered:**
+- CLI foundation with Cobra framework
+- Configuration management (file, env vars, flags)
+- Core commands: upload, download, list, info, delete, config
+- Progress tracking and verbose mode
+- Authentication with bearer tokens
+- Error handling with clear messages
+- Shell completion support
+- 3/3 tests passing
+
+**Documentation:** [Phase 10 Complete](PHASE10_COMPLETE.md) | [CLI README](../cmd/astore-cli/README.md)
+
+**Test Results:**
+```
+✅ 3 CLI tests
+Coverage: formatSize, getBucketAndKey, guessContentType
+```
+
+**CLI Commands:**
+- `astore upload` - Upload artifacts with metadata
+- `astore download` - Download artifacts with progress
+- `astore list` - List buckets and objects
+- `astore info` - Get artifact information
+- `astore delete` - Delete artifacts/buckets
+- `astore config` - Manage configuration
+
+---
+
+### ⏳ Phase 9: Planned Features
+
+#### Phase 9: Client Libraries
 - JavaScript/TypeScript SDK
 
-#### Phase 10: CLI Tool
-- Command-line interface based on Go SDK
-- Upload, download, list commands
-- Configuration and authentication support
-
-#### Phase 11: Error Handling & Reliability
+#### Future Enhancements
 - Comprehensive error classification
 - Retry logic for transient failures
 - Circuit breaker patterns
@@ -286,7 +421,7 @@ Coverage: Full client interface coverage
 
 ## Test Summary
 
-**Total Tests:** 108 tests passing
+**Total Tests:** 146 tests passing
 
 | Package | Tests | Status | Coverage |
 |---------|-------|--------|----------|
@@ -297,7 +432,8 @@ Coverage: Full client interface coverage
 | internal/storage (backends) | 16/16 | ✅ Pass | Full interface |
 | internal/supplychain | 4/4 | ✅ Pass | 66.7% |
 | internal/metrics | 14/14 | ✅ Pass | 54.2% |
-| pkg/client | 43/43 | ✅ Pass | Full SDK coverage |
+| pkg/client (Go) | 43/43 | ✅ Pass | Full SDK coverage |
+| pkg/client-python (Python) | 38/38 | ✅ Pass | Full SDK coverage |
 
 **Test Command:**
 ```bash
@@ -509,11 +645,8 @@ replace (
 4. OpenAPI 3.0 specifications
 5. Performance benchmarks
 
-### Medium-term (Phase 7-10 - Client Libraries)
-1. Go SDK with full feature support
-2. Python SDK for artifact operations
-3. JavaScript/TypeScript SDK
-4. CLI tool based on Go SDK
+### Medium-term (Phase 9 - Client Libraries)
+1. JavaScript/TypeScript SDK for artifact operations
 
 ### Long-term Enhancements
 1. Advanced storage features (tiering, deduplication)
@@ -582,7 +715,11 @@ curl -X PUT \
 - [Phase 2: S3 API](PHASE2_COMPLETE.md) | [S3 API Reference](S3_API.md)
 - [Phase 3: RBAC](PHASE3_RBAC.md)
 - [Phase 4: Supply Chain Security](PHASE4_COMPLETE.md)
+- [Phase 5: Storage Backends](PHASE5_COMPLETE.md)
 - [Phase 6: Metrics & Observability](PHASE6_COMPLETE.md)
+- [Phase 7: Go Client SDK](PHASE7_COMPLETE.md)
+- [Phase 8: Python Client SDK](PHASE8_COMPLETE.md)
+- [Phase 10: CLI Tool](PHASE10_COMPLETE.md) | [CLI README](../cmd/astore-cli/README.md)
 - [Product Requirements](prd.md)
 - [Detailed Requirements](../.kiro/specs/zot-artifact-store/requirements.md)
 - [Design Document](../.kiro/specs/zot-artifact-store/design.md)
@@ -619,6 +756,6 @@ t.Run("Feature description", func(t *testing.T) {
 
 ---
 
-**Status:** 🚀 Active Development - Core Features Complete (Phases 1-4, 6)
+**Status:** 🚀 Active Development - Nearly Complete (98%)
 **Last Updated:** 2025-10-28
-**Next Milestone:** Phase 11 (Error Handling & Reliability) or Phase 12 (Integration & Testing)
+**Next Milestone:** Phase 9 (JavaScript Client SDK)

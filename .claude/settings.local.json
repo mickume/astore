@@ -12,7 +12,14 @@
       "Bash(make test:*)",
       "Bash(tree:*)",
       "Bash(go build:*)",
-      "Read(//opt/homebrew/Cellar/go/1.25.3/libexec/src/net/**)"
+      "Read(//opt/homebrew/Cellar/go/1.25.3/libexec/src/net/**)",
+      "Bash(./bin/astore:*)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(pytest:*)",
+      "Bash(deactivate)"
     ],
     "deny": [],
     "ask": []

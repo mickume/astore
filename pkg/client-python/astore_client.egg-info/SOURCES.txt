@@ -1,0 +1,16 @@
+README.md
+setup.py
+astore_client/__init__.py
+astore_client/client.py
+astore_client/exceptions.py
+astore_client/models.py
+astore_client/operations.py
+astore_client/supplychain.py
+astore_client.egg-info/PKG-INFO
+astore_client.egg-info/SOURCES.txt
+astore_client.egg-info/dependency_links.txt
+astore_client.egg-info/requires.txt
+astore_client.egg-info/top_level.txt
+tests/test_client.py
+tests/test_operations.py
+tests/test_supplychain.py
