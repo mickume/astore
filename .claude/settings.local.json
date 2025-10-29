@@ -19,7 +19,9 @@
       "Bash(source:*)",
       "Bash(pip install:*)",
       "Bash(pytest:*)",
-      "Bash(deactivate)"
+      "Bash(deactivate)",
+      "Bash(npm install)",
+      "Bash(npm test)"
     ],
     "deny": [],
     "ask": []
