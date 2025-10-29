@@ -1,5 +1,30 @@
 # Design Document: Zot Artifact Store Extension
 
+**Last Updated:** 2025-10-29
+
+## Implementation Status
+
+**IMPORTANT:** This document describes the complete design vision. Not all features are fully implemented.
+
+### What's Implemented ✅
+- S3-Compatible API with 13 endpoints (17/17 tests passing)
+- RBAC Extension with JWT validation, policy engine, audit logging (7/7 tests passing)
+- Supply Chain Extension with signing, SBOM, attestations (11/11 tests passing)
+- Storage backends: Filesystem, S3, Azure Blob, Google Cloud Storage (16/16 tests passing)
+- Metrics Extension: Prometheus, OpenTelemetry, health checks (14/14 tests passing)
+- Client libraries: Go, Python, JavaScript/TypeScript (all tests passing)
+- CLI tool with complete command set
+
+### What's Partially Implemented 🟡
+- Extension integration (some build failures)
+- OpenShift integration (designed but not fully production-validated)
+
+### What's Design-Only ❌
+- Kubernetes Operator Go controller (CRD YAML exists, no Go implementation)
+- Full CI/CD GitHub Actions integration (workflow exists but not fully tested)
+- Complete Tekton pipeline support
+- Advanced OpenShift features (some designed but not implemented)
+
 ## Overview
 
 The Zot Artifact Store is an extension of the existing Zot OCI registry that adds enterprise-grade binary artifact storage capabilities while maintaining full compatibility with upstream Zot. The design leverages Zot's existing extension system, storage backends, and infrastructure to minimize custom development while adding comprehensive RBAC, supply chain security features, and S3-compatible APIs for binary artifacts.

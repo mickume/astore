@@ -27,7 +27,8 @@
       "Bash(podman inspect:*)",
       "Read(//Users/candlekeep/devel/go/pkg/mod/zotregistry.io/zot@v1.4.3/pkg/api/**)",
       "Bash(curl:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

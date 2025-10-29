@@ -1,5 +1,18 @@
 # Requirements Document
 
+**Last Updated:** 2025-10-29
+
+## Implementation Status
+
+This requirements document describes the complete vision. See [Implementation Tasks](tasks.md) for detailed status of each requirement.
+
+**Summary:**
+- Requirements 1-10: ✅ Core features mostly implemented
+- Requirement 11-12: ✅ Zot integration and reuse implemented
+- Requirement 13-14: 🟡 TDD and documentation partially complete
+- Requirement 15: 🟡 OpenShift features designed but not fully production-tested
+- Requirement 16: ❌ Operator CRD exists but Go controller not implemented
+
 ## Introduction
 
 This document specifies the requirements for extending the Zot OCI registry to create a lightweight, scalable microservice for handling large binary file uploads and downloads with enterprise-grade reliability features. The system will support software supply chain security as its core value proposition, including artifact signing, SBOM support, and attestations, while maintaining S3-like bucket organization and providing client libraries for multiple programming languages.

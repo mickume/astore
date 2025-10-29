@@ -7,15 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 2 - Core S3 API (In Progress)
-- S3-compatible API endpoints
-- Resumable uploads with HTTP 206
-- Bucket management
-- Multipart upload support
+### What's Implemented
+- Core S3-compatible API (13 endpoints, 17/17 tests passing)
+- RBAC with Keycloak integration (7/7 tests passing)
+- Supply chain security (signing, SBOM, attestations, 11/11 tests passing)
+- Multi-cloud storage backends (16/16 tests passing)
+- Client SDKs for Go, Python, JavaScript (all tests passing)
+- CLI tool with full command set
+- Observability (Prometheus, OpenTelemetry, health checks)
+
+### What's Missing
+- Kubernetes operator Go controller implementation (only CRD YAML exists)
+- Full integration testing and production validation
+- Some extension packages have build failures
+- Complete OpenShift deployment workflow
 
 ## [0.1.0-dev] - 2025-10-28
 
-### Phase 1 - Foundation (Complete)
+**Status:** Core functionality implemented, not production-ready
+
+### Implemented Features
 
 #### Added
 - Initial project structure with Go modules

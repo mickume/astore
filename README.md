@@ -15,58 +15,88 @@ Zot Artifact Store extends the Zot OCI registry to provide:
 
 ## Project Status
 
-✅ **Phase 1 Complete: Foundation** - Extension framework, testing infrastructure, and deployment setup
-✅ **Phase 2 Complete: Core S3 API** - Full S3-compatible API with multipart uploads and resumable downloads
-✅ **Phase 3 Complete: RBAC** - Keycloak integration, policy engine, and comprehensive audit logging
-🚧 **Phase 4 In Progress: Supply Chain Security** - Artifact signing and verification, SBOM management
+**Last Updated:** 2025-10-29
 
-**Overall Progress:** 56% complete (32/57 foundation tasks) | [View Detailed Status](docs/IMPLEMENTATION_STATUS.md)
+### Implementation Summary
 
-### Completed Features
+This project has significant functionality implemented but is **not production-ready**. Key areas completed:
 
-#### Phase 1: Foundation
-- ✅ Go project structure with Zot v1.4.3 integration
-- ✅ Extension framework for modular features
-- ✅ Four core extensions (stubs): S3 API, RBAC, Supply Chain, Metrics
-- ✅ Testing infrastructure with TDD patterns
-- ✅ Containerfile with Red Hat UBI base images
-- ✅ Podman build scripts and development tools
-- ✅ ZotArtifactStore CRD for Kubernetes operator
-- ✅ Comprehensive project documentation
+✅ **Core Functionality Implemented:**
+- S3-compatible API with 13 endpoints (17/17 tests passing)
+- RBAC with Keycloak JWT auth and policy engine (7/7 tests passing)
+- Supply chain security: signing, SBOM, attestations (11/11 tests passing)
+- Multi-cloud storage backends: Filesystem, S3, Azure, GCS (16/16 tests passing)
+- Client SDKs: Go (43 tests), Python (38 tests), JavaScript (32 tests)
+- CLI tool with full command set (3/3 tests passing)
+- Metrics: Prometheus, OpenTelemetry, health checks (14/14 tests passing)
 
-#### Phase 2: S3-Compatible API
-- ✅ Artifact metadata models with OCI digest integration
-- ✅ BoltDB metadata storage layer (buckets, artifacts, multipart uploads)
-- ✅ Complete S3 API implementation (13 endpoints)
-- ✅ Bucket operations: create, list, delete
-- ✅ Object operations: upload, download, metadata, delete, list
-- ✅ Multipart upload support for large files
-- ✅ Resumable downloads with HTTP range requests (RFC 7233)
-- ✅ Custom metadata support with X-Amz-Meta-* headers
-- ✅ Filesystem-based storage with atomic operations
-- ✅ Comprehensive test coverage (17/17 tests passing)
-- ✅ S3 API documentation with client examples
+🟡 **Partial or Design-Only:**
+- Kubernetes Operator (CRD defined, Go controller NOT implemented)
+- Full OpenShift integration (designed but not fully tested)
+- Extension integration (some build failures in extension packages)
 
-#### Phase 3: RBAC with Keycloak Integration
-- ✅ JWT token validation with Keycloak OIDC/OAuth2
-- ✅ Policy-based authorization engine (resource + action based)
-- ✅ Authentication and authorization HTTP middleware
-- ✅ Comprehensive audit logging system
-- ✅ Policy management API (create, read, update, delete policies)
-- ✅ Audit log query API with filtering
-- ✅ Admin role with full access
-- ✅ Deny > Allow precedence for policies
-- ✅ Wildcard and pattern matching for resources
-- ✅ Anonymous access support (configurable for GET operations)
-- ✅ Extended BoltDB with policies and audit logs
-- ✅ Test coverage (7/7 policy tests passing)
+❌ **Not Implemented:**
+- Production-grade operator with reconciliation logic
+- Complete end-to-end integration testing
+- Full CI/CD pipeline validation
 
-#### Phase 4: Supply Chain Security (Partial)
-- ✅ Supply chain models (Signature, SBOM, Attestation)
-- ✅ Cryptographic signing and verification (RSA-SHA256)
-- 🚧 SBOM storage and retrieval (pending)
-- 🚧 Attestation management (pending)
-- 🚧 Integration with S3 API workflow (pending)
+**Estimated Completion:** ~75% of core functionality, ~50% of production readiness
+
+### Implemented Features
+
+#### Core S3-Compatible API ✅
+- Complete S3 API with 13 endpoints (17/17 tests passing)
+- Bucket operations: create, list, delete
+- Object operations: upload, download, metadata, delete, list
+- Multipart upload support for large files
+- Resumable downloads with HTTP range requests (RFC 7233)
+- Custom metadata with X-Amz-Meta-* headers
+- BoltDB metadata storage layer
+- SHA256 integrity verification
+
+#### RBAC & Authentication ✅
+- JWT token validation with Keycloak OIDC/OAuth2
+- Policy-based authorization engine (7/7 tests passing)
+- Policy management API (CRUD operations)
+- Comprehensive audit logging
+- Wildcard and pattern matching for resources
+- Anonymous access support (configurable)
+
+#### Supply Chain Security ✅
+- Cryptographic signing and verification (RSA-2048/SHA-256)
+- SBOM support (SPDX, CycloneDX formats)
+- Attestations (build, test, scan, provenance)
+- Complete API with 8 endpoints (11/11 tests passing)
+
+#### Storage Backends ✅
+- Filesystem backend with atomic operations (16/16 tests passing)
+- S3 backend (AWS, MinIO compatible)
+- Azure Blob Storage backend
+- Google Cloud Storage backend
+- Retry mechanisms and circuit breakers
+
+#### Client Libraries ✅
+- **Go SDK:** Complete implementation (43/43 tests passing)
+- **Python SDK:** Full-featured with type hints (38/38 tests passing)
+- **JavaScript/TypeScript SDK:** Browser + Node.js (32/32 tests passing)
+- **CLI Tool:** Cobra-based with all commands (3/3 tests passing)
+
+#### Observability ✅
+- Prometheus metrics (13 metrics, 14/14 tests passing)
+- OpenTelemetry distributed tracing
+- Health check endpoints (/health, /health/ready, /health/live)
+
+### Known Limitations
+
+#### Kubernetes Operator ❌
+- CRD definitions exist in YAML
+- Go controller implementation is **NOT implemented** (controllers/ directory is empty)
+- Operator-based deployment is design-only
+
+#### Integration Issues 🟡
+- Some extension packages have build failures
+- Full end-to-end integration not fully tested
+- OpenShift-specific features designed but not production-validated
 
 ## Architecture
 
