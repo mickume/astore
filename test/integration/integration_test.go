@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package integration_test
 
 import (
@@ -190,8 +193,7 @@ func setupTestServer(t *testing.T, tmpDir string) (*httptest.Server, string) {
 	// Create router
 	router := mux.NewRouter()
 
-	// Initialize S3 API extension
-	s3Ext := s3.NewS3APIExtension()
+	// Initialize S3 API handler
 	s3Handler := s3.NewHandler(metadataStore, tmpDir+"/artifacts", logger)
 	s3Handler.RegisterRoutes(router)
 
