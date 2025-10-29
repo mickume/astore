@@ -14,22 +14,5 @@ storage:
 log:
   level: info
 
-# Extensions (all enabled with defaults)
-extensions:
-  s3api:
-    enabled: true
-    metadataDBPath: /tmp/zot-artifacts/metadata.db
-
-  rbac:
-    enabled: false  # Disable for local development
-
-  supplychain:
-    enabled: true
-    metadataDBPath: /tmp/zot-artifacts/metadata.db
-
-  metrics:
-    enabled: true
-    prometheus:
-      enabled: true
-    health:
-      enabled: true
+# Note: Extension configuration will be added in a future update
+# For now, all extensions are enabled with default settings

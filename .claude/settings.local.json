@@ -24,7 +24,10 @@
       "Bash(npm test)",
       "Bash(CGO_ENABLED=0 go build:*)",
       "Bash(podman images:*)",
-      "Bash(podman inspect:*)"
+      "Bash(podman inspect:*)",
+      "Read(//Users/candlekeep/devel/go/pkg/mod/zotregistry.io/zot@v1.4.3/pkg/api/**)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
